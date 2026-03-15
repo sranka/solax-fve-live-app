@@ -86,6 +86,10 @@
     display: flex; align-items: center; justify-content: center;
   }
   .header-btn:hover, .header-btn:active { color: var(--text); background: rgba(255,255,255,0.12); }
+  .lang-btn {
+    font-size: 12px; font-weight: 700; font-family: 'DM Sans', sans-serif;
+    letter-spacing: 0.02em; text-transform: uppercase;
+  }
 
   .error-banner {
     background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
@@ -405,7 +409,7 @@
     <div class="logo-icon">☀</div>
     <div>
       <h1>Solax FVE</h1>
-      <div class="header-subtitle" id="headerSubtitle">Nepřipojeno</div>
+      <div class="header-subtitle" id="headerSubtitle"></div>
     </div>
   </div>
   <div class="header-right">
@@ -417,30 +421,31 @@
       <div class="switcher-dropdown" id="switcherDropdown"></div>
     </div>
     <div class="status-dot" id="statusDot"></div>
-    <button class="header-btn" id="openSettings" aria-label="Nastavení">⚙</button>
+    <button class="header-btn lang-btn" id="langBtn" aria-label="Language"></button>
+    <button class="header-btn" id="openSettings" aria-label="Settings">⚙</button>
   </div>
 </div>
 
 <div class="main">
   <!-- Install Banner -->
   <div class="install-banner" id="installBanner">
-    <div class="install-banner-text"><strong>Nainstalovat na telefon</strong>Funguje i offline</div>
-    <button class="install-btn" id="installBtn">Instalovat</button>
+    <div class="install-banner-text"><strong id="installTitle"></strong><span id="installSubtitle"></span></div>
+    <button class="install-btn" id="installBtn"></button>
     <button class="dismiss-btn" id="dismissInstall">✕</button>
   </div>
 
   <!-- Error Banner -->
   <div class="error-banner" id="errorBanner">
-    <div class="error-banner-text"><strong>Nelze se připojit</strong><span id="errorBannerMsg">Zkontrolujte IP adresu a heslo</span></div>
-    <button class="btn btn-primary" onclick="openSettingsModal()">Nastavení</button>
+    <div class="error-banner-text"><strong id="errorTitle"></strong><span id="errorBannerMsg"></span></div>
+    <button class="btn btn-primary" id="errorSettingsBtn" onclick="openSettingsModal()"></button>
   </div>
 
   <!-- Setup Screen -->
   <div class="loading-screen" id="setupScreen">
     <div class="loading-icon">☀️</div>
     <h2>Solax FVE Monitor</h2>
-    <p>Přidejte první střídač</p>
-    <button class="btn btn-primary" onclick="openSettingsModal()">Nastavení připojení</button>
+    <p id="setupSubtitle"></p>
+    <button class="btn btn-primary" id="setupBtn" onclick="openSettingsModal()"></button>
   </div>
 
   <!-- Dashboard -->
@@ -455,7 +460,7 @@
         </div>
         <div class="flow-node node-battery">
           <div class="flow-node-icon">🔋</div>
-          <div class="flow-node-label">Baterie</div>
+          <div class="flow-node-label" id="flowLabelBattery"></div>
           <div class="flow-node-value" id="batteryPower">--</div>
           <div class="flow-node-unit">W</div>
           <div class="battery-bar-container">
@@ -466,13 +471,13 @@
         <div class="flow-arrow" id="arrowSolarDown">↓</div>
         <div class="flow-node node-grid">
           <div class="flow-node-icon">⚡</div>
-          <div class="flow-node-label">Síť</div>
+          <div class="flow-node-label" id="flowLabelGrid"></div>
           <div class="flow-node-value" id="gridPower">--</div>
           <div class="flow-node-unit">W</div>
         </div>
         <div class="flow-node node-home">
           <div class="flow-node-icon">🏠</div>
-          <div class="flow-node-label">Spotřeba</div>
+          <div class="flow-node-label" id="flowLabelConsumption"></div>
           <div class="flow-node-value" id="homePower">--</div>
           <div class="flow-node-unit">W</div>
         </div>
@@ -481,21 +486,21 @@
 
     <div class="status-row">
       <div class="status-chip">
-        <div class="status-chip-label">Režim</div>
+        <div class="status-chip-label" id="chipLabelMode"></div>
         <div class="status-chip-value" id="runMode">--</div>
       </div>
       <div class="status-chip">
-        <div class="status-chip-label">Výroba dnes</div>
+        <div class="status-chip-label" id="chipLabelYieldToday"></div>
         <div class="status-chip-value" id="yieldToday" style="color:var(--solar)">-- kWh</div>
       </div>
       <div class="status-chip">
-        <div class="status-chip-label">Celkem</div>
+        <div class="status-chip-label" id="chipLabelTotal"></div>
         <div class="status-chip-value" id="yieldTotal" style="color:var(--text-dim)">-- MWh</div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title"><span class="card-title-icon">☀️</span> Solární panely</div>
+      <div class="card-title"><span class="card-title-icon">☀️</span> <span id="cardTitleSolar"></span></div>
       <div class="detail-grid">
         <div class="detail-row"><span class="detail-label">MPPT1</span><span class="detail-value" id="pv1Power">-- W</span></div>
         <div class="detail-row"><span class="detail-label">MPPT2</span><span class="detail-value" id="pv2Power">-- W</span></div>
@@ -505,19 +510,19 @@
     </div>
 
     <div class="card">
-      <div class="card-title"><span class="card-title-icon">🔋</span> Baterie</div>
+      <div class="card-title"><span class="card-title-icon">🔋</span> <span id="cardTitleBattery"></span></div>
       <div class="detail-grid">
-        <div class="detail-row"><span class="detail-label">Výkon</span><span class="detail-value" id="battPowerDetail">-- W</span></div>
-        <div class="detail-row"><span class="detail-label">Nabití</span><span class="detail-value" id="battSOCDetail">--%</span></div>
-        <div class="detail-row"><span class="detail-label">Napětí</span><span class="detail-value" id="battVoltage">-- V</span></div>
-        <div class="detail-row"><span class="detail-label">Teplota</span><span class="detail-value" id="battTemp">-- °C</span></div>
+        <div class="detail-row"><span class="detail-label" id="detailLabelPower"></span><span class="detail-value" id="battPowerDetail">-- W</span></div>
+        <div class="detail-row"><span class="detail-label" id="detailLabelCharge"></span><span class="detail-value" id="battSOCDetail">--%</span></div>
+        <div class="detail-row"><span class="detail-label" id="detailLabelVoltage"></span><span class="detail-value" id="battVoltage">-- V</span></div>
+        <div class="detail-row"><span class="detail-label" id="detailLabelTemp"></span><span class="detail-value" id="battTemp">-- °C</span></div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title"><span class="card-title-icon">⚡</span> Síť — 3 fáze</div>
+      <div class="card-title"><span class="card-title-icon">⚡</span> <span id="cardTitleGrid"></span></div>
       <table class="phase-table">
-        <thead><tr><th></th><th>Napětí</th><th>Proud</th><th>Výkon</th><th>Freq</th></tr></thead>
+        <thead><tr><th></th><th id="thVoltage"></th><th id="thCurrent"></th><th id="thPower"></th><th>Freq</th></tr></thead>
         <tbody>
           <tr><td>L1</td><td id="gridAV">--</td><td id="gridAI">--</td><td id="gridAP">--</td><td id="gridAF">--</td></tr>
           <tr><td>L2</td><td id="gridBV">--</td><td id="gridBI">--</td><td id="gridBP">--</td><td id="gridBF">--</td></tr>
@@ -525,14 +530,14 @@
         </tbody>
       </table>
       <div style="margin-top:10px">
-        <div class="detail-row"><span class="detail-label">Tok do sítě (feedin)</span><span class="detail-value" id="feedinPower">-- W</span></div>
+        <div class="detail-row"><span class="detail-label" id="detailLabelFeedIn"></span><span class="detail-value" id="feedinPower">-- W</span></div>
       </div>
     </div>
 
     <div class="card" id="epsCard" style="display:none">
-      <div class="card-title"><span class="card-title-icon">🔌</span> Záložní napájení (EPS)</div>
+      <div class="card-title"><span class="card-title-icon">🔌</span> <span id="cardTitleEPS"></span></div>
       <table class="phase-table">
-        <thead><tr><th></th><th>Napětí</th><th>Proud</th><th>Výkon</th></tr></thead>
+        <thead><tr><th></th><th id="thEpsVoltage"></th><th id="thEpsCurrent"></th><th id="thEpsPower"></th></tr></thead>
         <tbody>
           <tr><td>L1</td><td id="epsAV">--</td><td id="epsAI">--</td><td id="epsAP">--</td></tr>
           <tr><td>L2</td><td id="epsBV">--</td><td id="epsBI">--</td><td id="epsBP">--</td></tr>
@@ -542,15 +547,15 @@
     </div>
 
     <div class="card">
-      <div class="card-title"><span class="card-title-icon">📊</span> Energie celkem</div>
+      <div class="card-title"><span class="card-title-icon">📊</span> <span id="cardTitleEnergy"></span></div>
       <div class="energy-row">
         <div class="energy-item">
-          <div class="energy-item-label">Do sítě</div>
+          <div class="energy-item-label" id="energyLabelToGrid"></div>
           <div class="energy-item-value" id="feedInEnergy" style="color:var(--grid-neg)">--</div>
           <div class="energy-item-unit">kWh</div>
         </div>
         <div class="energy-item">
-          <div class="energy-item-label">Ze sítě</div>
+          <div class="energy-item-label" id="energyLabelFromGrid"></div>
           <div class="energy-item-value" id="consumeEnergy" style="color:var(--grid-pos)">--</div>
           <div class="energy-item-unit">kWh</div>
         </div>
@@ -558,8 +563,8 @@
     </div>
 
     <div class="refresh-bar">
-      <button class="pause-btn" id="pauseBtn" aria-label="Pozastavit">⏸</button>
-      <span id="refreshBar">Poslední aktualizace: --</span>
+      <button class="pause-btn" id="pauseBtn" aria-label="Pause">⏸</button>
+      <span id="refreshBar">--</span>
     </div>
   </div>
 </div>
@@ -568,10 +573,10 @@
 <div class="modal-overlay" id="settingsModal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <h2>⚙ Střídače</h2>
+    <h2 id="settingsTitle"></h2>
     <div class="conn-list" id="connList"></div>
-    <button class="btn btn-primary" id="addNewConn">+ Přidat střídač</button>
-    <button class="btn btn-secondary" id="closeSettings">Zavřít</button>
+    <button class="btn btn-primary" id="addNewConn"></button>
+    <button class="btn btn-secondary" id="closeSettings"></button>
   </div>
 </div>
 
@@ -579,51 +584,51 @@
 <div class="modal-overlay" id="editModal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <h2 id="editModalTitle">Přidat střídač</h2>
+    <h2 id="editModalTitle"></h2>
 
     <div class="form-group">
-      <label>Název</label>
-      <input type="text" id="cfgName" placeholder="Dům, Garáž, Střecha…" autocomplete="off">
+      <label id="labelName"></label>
+      <input type="text" id="cfgName" autocomplete="off">
     </div>
     <div class="form-group">
-      <label>IP adresa střídače</label>
+      <label id="labelIP"></label>
       <input type="text" id="cfgHost" placeholder="192.168.199.192" inputmode="url" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-      <div class="form-hint">Lokální IP adresa Solax donglu</div>
+      <div class="form-hint" id="hintIP"></div>
     </div>
     <div class="form-group">
-      <label>Heslo (pwd)</label>
-      <input type="text" id="cfgPassword" placeholder="Sériové číslo donglu nebo heslo" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-      <div class="form-hint">Obvykle sériové číslo WiFi donglu nebo vlastní heslo</div>
+      <label id="labelPassword"></label>
+      <input type="text" id="cfgPassword" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <div class="form-hint" id="hintPassword"></div>
     </div>
     <div class="form-group">
-      <label>Protokol</label>
+      <label id="labelProtocol"></label>
       <select id="cfgProtocol">
         <option value="http">HTTP</option>
         <option value="https">HTTPS</option>
       </select>
     </div>
     <div class="form-group">
-      <label>Interval obnovení (s)</label>
+      <label id="labelInterval"></label>
       <input type="number" id="cfgInterval" value="10" min="3" max="300" inputmode="numeric">
     </div>
     <div class="form-group">
-      <label>X-Forwarded-For (volitelné)</label>
+      <label id="labelForwardedFor"></label>
       <input type="text" id="cfgForwardedFor" placeholder="5.8.8.8" autocomplete="off">
-      <div class="form-hint">Některé novější dongly vyžadují tento header</div>
+      <div class="form-hint" id="hintForwardedFor"></div>
     </div>
 
-    <button class="btn btn-primary" id="saveConn">Uložit</button>
-    <button class="btn btn-secondary" id="cancelEdit">Zrušit</button>
+    <button class="btn btn-primary" id="saveConn"></button>
+    <button class="btn btn-secondary" id="cancelEdit"></button>
   </div>
 </div>
 
 <!-- Confirm Dialog -->
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
-    <p id="confirmMsg">Opravdu smazat?</p>
+    <p id="confirmMsg"></p>
     <div class="confirm-actions">
-      <button class="btn btn-secondary btn-sm" id="confirmNo">Ne</button>
-      <button class="btn btn-danger btn-sm" id="confirmYes">Ano, smazat</button>
+      <button class="btn btn-secondary btn-sm" id="confirmNo"></button>
+      <button class="btn btn-danger btn-sm" id="confirmYes"></button>
     </div>
   </div>
 </div>
@@ -632,6 +637,255 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ═══════════════════════════════════════════
+//  Localization
+// ═══════════════════════════════════════════
+const LANG_KEY = 'solax_fve_lang';
+const i18n = {
+  cs: {
+    disconnected: 'Nepřipojeno',
+    settings: 'Nastavení',
+    installTitle: 'Nainstalovat na telefon',
+    installSubtitle: 'Funguje i offline',
+    install: 'Instalovat',
+    errorTitle: 'Nelze se připojit',
+    errorDefaultMsg: 'Zkontrolujte IP adresu a heslo',
+    setupSubtitle: 'Přidejte první střídač',
+    setupBtn: 'Nastavení připojení',
+    battery: 'Baterie',
+    grid: 'Síť',
+    consumption: 'Spotřeba',
+    mode: 'Režim',
+    yieldToday: 'Výroba dnes',
+    total: 'Celkem',
+    solarPanels: 'Solární panely',
+    power: 'Výkon',
+    charge: 'Nabití',
+    voltage: 'Napětí',
+    temperature: 'Teplota',
+    grid3Phase: 'Síť — 3 fáze',
+    current: 'Proud',
+    feedInLabel: 'Tok do sítě (feedin)',
+    eps: 'Záložní napájení (EPS)',
+    totalEnergy: 'Energie celkem',
+    toGrid: 'Do sítě',
+    fromGrid: 'Ze sítě',
+    pause: 'Pozastavit',
+    resume: 'Pokračovat',
+    updated: 'Aktualizace:',
+    inverters: '⚙ Střídače',
+    addInverter: '+ Přidat střídač',
+    close: 'Zavřít',
+    addInverterTitle: 'Přidat střídač',
+    editInverterTitle: 'Upravit střídač',
+    name: 'Název',
+    namePlaceholder: 'Dům, Garáž, Střecha…',
+    ipAddress: 'IP adresa střídače',
+    ipHint: 'Lokální IP adresa Solax donglu',
+    password: 'Heslo (pwd)',
+    passwordPlaceholder: 'Sériové číslo donglu nebo heslo',
+    passwordHint: 'Obvykle sériové číslo WiFi donglu nebo vlastní heslo',
+    protocol: 'Protokol',
+    interval: 'Interval obnovení (s)',
+    forwardedFor: 'X-Forwarded-For (volitelné)',
+    forwardedForHint: 'Některé novější dongly vyžadují tento header',
+    save: 'Uložit',
+    cancel: 'Zrušit',
+    confirmNo: 'Ne',
+    confirmYes: 'Ano, smazat',
+    noInverters: 'Žádné střídače',
+    noInvertersHint: 'Přidejte první připojení',
+    enterIP: 'Zadejte IP adresu',
+    enterPassword: 'Zadejte heslo',
+    saved: 'Uloženo ✓',
+    deleted: 'Smazáno',
+    errorPrefix: 'Chyba:',
+    missingData: 'Chybí pole Data',
+    battDischarging: '▲ vybíjí',
+    battCharging: '▼ nabíjí',
+    deleteConfirm: 'Smazat „{name}"?',
+    lastUpdate: 'Poslední aktualizace: --',
+  },
+  en: {
+    disconnected: 'Not connected',
+    settings: 'Settings',
+    installTitle: 'Install on your phone',
+    installSubtitle: 'Works offline too',
+    install: 'Install',
+    errorTitle: 'Cannot connect',
+    errorDefaultMsg: 'Check IP address and password',
+    setupSubtitle: 'Add your first inverter',
+    setupBtn: 'Connection settings',
+    battery: 'Battery',
+    grid: 'Grid',
+    consumption: 'Consumption',
+    mode: 'Mode',
+    yieldToday: "Today's yield",
+    total: 'Total',
+    solarPanels: 'Solar panels',
+    power: 'Power',
+    charge: 'Charge',
+    voltage: 'Voltage',
+    temperature: 'Temperature',
+    grid3Phase: 'Grid — 3 phases',
+    current: 'Current',
+    feedInLabel: 'Feed-in power',
+    eps: 'Backup power (EPS)',
+    totalEnergy: 'Total energy',
+    toGrid: 'To grid',
+    fromGrid: 'From grid',
+    pause: 'Pause',
+    resume: 'Resume',
+    updated: 'Updated:',
+    inverters: '⚙ Inverters',
+    addInverter: '+ Add inverter',
+    close: 'Close',
+    addInverterTitle: 'Add inverter',
+    editInverterTitle: 'Edit inverter',
+    name: 'Name',
+    namePlaceholder: 'Home, Garage, Roof…',
+    ipAddress: 'Inverter IP address',
+    ipHint: 'Local IP address of Solax dongle',
+    password: 'Password (pwd)',
+    passwordPlaceholder: 'Dongle serial number or password',
+    passwordHint: 'Usually WiFi dongle serial or custom password',
+    protocol: 'Protocol',
+    interval: 'Refresh interval (s)',
+    forwardedFor: 'X-Forwarded-For (optional)',
+    forwardedForHint: 'Some newer dongles require this header',
+    save: 'Save',
+    cancel: 'Cancel',
+    confirmNo: 'No',
+    confirmYes: 'Yes, delete',
+    noInverters: 'No inverters',
+    noInvertersHint: 'Add your first connection',
+    enterIP: 'Enter IP address',
+    enterPassword: 'Enter password',
+    saved: 'Saved ✓',
+    deleted: 'Deleted',
+    errorPrefix: 'Error:',
+    missingData: 'Missing Data array',
+    battDischarging: '▲ discharge',
+    battCharging: '▼ charge',
+    deleteConfirm: 'Delete "{name}"?',
+    lastUpdate: 'Last update: --',
+  }
+};
+
+let currentLang = (function() {
+  try {
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved && i18n[saved]) return saved;
+  } catch(e) {}
+  const bl = (navigator.language || '').toLowerCase();
+  return bl.startsWith('cs') || bl.startsWith('sk') ? 'cs' : 'en';
+})();
+
+function t(key) { return (i18n[currentLang] && i18n[currentLang][key]) || (i18n.en[key]) || key; }
+
+function applyLanguage() {
+  document.documentElement.lang = currentLang;
+  document.getElementById('langBtn').textContent = currentLang === 'cs' ? 'EN' : 'CZ';
+  document.getElementById('langBtn').title = currentLang === 'cs' ? 'Switch to English' : 'Přepnout do češtiny';
+
+  // Install banner
+  document.getElementById('installTitle').textContent = t('installTitle');
+  document.getElementById('installSubtitle').textContent = t('installSubtitle');
+  document.getElementById('installBtn').textContent = t('install');
+
+  // Error banner
+  document.getElementById('errorTitle').textContent = t('errorTitle');
+  document.getElementById('errorSettingsBtn').textContent = t('settings');
+
+  // Setup screen
+  document.getElementById('setupSubtitle').textContent = t('setupSubtitle');
+  document.getElementById('setupBtn').textContent = t('setupBtn');
+
+  // Flow labels
+  document.getElementById('flowLabelBattery').textContent = t('battery');
+  document.getElementById('flowLabelGrid').textContent = t('grid');
+  document.getElementById('flowLabelConsumption').textContent = t('consumption');
+
+  // Status row
+  document.getElementById('chipLabelMode').textContent = t('mode');
+  document.getElementById('chipLabelYieldToday').textContent = t('yieldToday');
+  document.getElementById('chipLabelTotal').textContent = t('total');
+
+  // Card titles
+  document.getElementById('cardTitleSolar').textContent = t('solarPanels');
+  document.getElementById('cardTitleBattery').textContent = t('battery');
+  document.getElementById('cardTitleGrid').textContent = t('grid3Phase');
+  document.getElementById('cardTitleEPS').textContent = t('eps');
+  document.getElementById('cardTitleEnergy').textContent = t('totalEnergy');
+
+  // Detail labels
+  document.getElementById('detailLabelPower').textContent = t('power');
+  document.getElementById('detailLabelCharge').textContent = t('charge');
+  document.getElementById('detailLabelVoltage').textContent = t('voltage');
+  document.getElementById('detailLabelTemp').textContent = t('temperature');
+  document.getElementById('detailLabelFeedIn').textContent = t('feedInLabel');
+
+  // Table headers
+  document.getElementById('thVoltage').textContent = t('voltage');
+  document.getElementById('thCurrent').textContent = t('current');
+  document.getElementById('thPower').textContent = t('power');
+  document.getElementById('thEpsVoltage').textContent = t('voltage');
+  document.getElementById('thEpsCurrent').textContent = t('current');
+  document.getElementById('thEpsPower').textContent = t('power');
+
+  // Energy labels
+  document.getElementById('energyLabelToGrid').textContent = t('toGrid');
+  document.getElementById('energyLabelFromGrid').textContent = t('fromGrid');
+
+  // Refresh bar
+  if (!lastData) document.getElementById('refreshBar').textContent = t('lastUpdate');
+
+  // Settings modal
+  document.getElementById('settingsTitle').textContent = t('inverters');
+  document.getElementById('addNewConn').textContent = t('addInverter');
+  document.getElementById('closeSettings').textContent = t('close');
+
+  // Edit modal
+  document.getElementById('labelName').textContent = t('name');
+  document.getElementById('cfgName').placeholder = t('namePlaceholder');
+  document.getElementById('labelIP').textContent = t('ipAddress');
+  document.getElementById('hintIP').textContent = t('ipHint');
+  document.getElementById('labelPassword').textContent = t('password');
+  document.getElementById('cfgPassword').placeholder = t('passwordPlaceholder');
+  document.getElementById('hintPassword').textContent = t('passwordHint');
+  document.getElementById('labelProtocol').textContent = t('protocol');
+  document.getElementById('labelInterval').textContent = t('interval');
+  document.getElementById('labelForwardedFor').textContent = t('forwardedFor');
+  document.getElementById('hintForwardedFor').textContent = t('forwardedForHint');
+  document.getElementById('saveConn').textContent = t('save');
+  document.getElementById('cancelEdit').textContent = t('cancel');
+
+  // Confirm dialog
+  document.getElementById('confirmNo').textContent = t('confirmNo');
+  document.getElementById('confirmYes').textContent = t('confirmYes');
+
+  // Pause button
+  updatePauseBtn();
+
+  // Header subtitle (if disconnected)
+  const cfg = getActiveConfig();
+  if (!cfg) document.getElementById('headerSubtitle').textContent = t('disconnected');
+
+  // Re-render connection list if settings modal is open
+  if (document.getElementById('settingsModal').classList.contains('open')) renderConnList();
+
+  // Re-apply dynamic data if available
+  if (lastData) updateUI(lastData);
+}
+
+function toggleLanguage() {
+  currentLang = currentLang === 'cs' ? 'en' : 'cs';
+  try { localStorage.setItem(LANG_KEY, currentLang); } catch(e) {}
+  applyLanguage();
+}
+
+document.getElementById('langBtn').addEventListener('click', toggleLanguage);
+
 // ═══════════════════════════════════════════
 //  Multi-connection config in localStorage
 // ═══════════════════════════════════════════
@@ -726,7 +980,7 @@ async function fetchData() {
     });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const json = await resp.json();
-    if (!json.Data||!Array.isArray(json.Data)) throw new Error('Chybí pole Data');
+    if (!json.Data||!Array.isArray(json.Data)) throw new Error(t('missingData'));
     lastData = formatData(json.Data);
     consecutiveErrors = 0;
     dot.className = 'status-dot connected';
@@ -739,7 +993,7 @@ async function fetchData() {
     if (consecutiveErrors >= 2) {
       document.getElementById('errorBanner').classList.add('show');
     }
-    showToast(`Chyba: ${err.message}`);
+    showToast(`${t('errorPrefix')} ${err.message}`);
   }
 }
 
@@ -754,7 +1008,7 @@ function updateUI(d) {
   const bE=$('batteryPower');
   bE.textContent=Math.abs(d.BAT_Power);
   bE.className='flow-node-value '+(d.BAT_Power>0?'discharging':d.BAT_Power<0?'charging':'');
-  bE.parentElement.querySelector('.flow-node-unit').textContent='W '+(d.BAT_Power>0?'▲ vybíjí':d.BAT_Power<0?'▼ nabíjí':'idle');
+  bE.parentElement.querySelector('.flow-node-unit').textContent='W '+(d.BAT_Power>0?t('battDischarging'):d.BAT_Power<0?t('battCharging'):'idle');
   $('batterySOC').textContent=d.BatteryCapacity+'%';
   $('battSOCDetail').textContent=d.BatteryCapacity+'%';
   $('battPowerDetail').textContent=d.BAT_Power+' W';
@@ -806,7 +1060,8 @@ function updateUI(d) {
   $('yieldTotal').textContent=tk>=1000?(tk/1000).toFixed(1)+' MWh':tk.toFixed(0)+' kWh';
   $('feedInEnergy').textContent=d.FeedInEnergy.toFixed(1);
   $('consumeEnergy').textContent=d.ConsumeEnergy.toFixed(1);
-  $('refreshBar').textContent='Aktualizace: '+new Date().toLocaleTimeString('cs-CZ');
+  const locale = currentLang === 'cs' ? 'cs-CZ' : 'en-GB';
+  $('refreshBar').textContent=t('updated')+' '+new Date().toLocaleTimeString(locale);
 }
 
 // ═══════════════════════════════════════════
@@ -823,7 +1078,7 @@ function startPolling() {
   if(!cfg){
     document.getElementById('setupScreen').style.display='';
     document.getElementById('dashboard').style.display='none';
-    document.getElementById('headerSubtitle').textContent='Nepřipojeno';
+    document.getElementById('headerSubtitle').textContent=t('disconnected');
     document.getElementById('statusDot').className='status-dot';
     return;
   }
@@ -844,7 +1099,7 @@ function updatePauseBtn(){
   const btn=document.getElementById('pauseBtn');
   btn.textContent=paused?'▶':'⏸';
   btn.classList.toggle('paused',paused);
-  btn.setAttribute('aria-label',paused?'Pokračovat':'Pozastavit');
+  btn.setAttribute('aria-label',paused?t('resume'):t('pause'));
 }
 
 function switchTo(id){
@@ -890,7 +1145,7 @@ function closeSettingsModal(){ document.getElementById('settingsModal').classLis
 function renderConnList(){
   const list=document.getElementById('connList');
   if(!connections.length){
-    list.innerHTML='<div class="conn-empty"><div class="conn-empty-icon">📡</div>Žádné střídače<br>Přidejte první připojení</div>';
+    list.innerHTML=`<div class="conn-empty"><div class="conn-empty-icon">📡</div>${esc(t('noInverters'))}<br>${esc(t('noInvertersHint'))}</div>`;
     return;
   }
   list.innerHTML='';
@@ -903,8 +1158,8 @@ function renderConnList(){
         <div class="conn-item-host">${esc(c.protocol)}://${esc(c.host)}</div>
       </div>
       <div class="conn-item-actions">
-        <button class="conn-action-btn edit" title="Upravit">✎</button>
-        <button class="conn-action-btn delete" title="Smazat">✕</button>
+        <button class="conn-action-btn edit" title="${esc(t('editInverterTitle'))}">✎</button>
+        <button class="conn-action-btn delete" title="${esc(t('deleted'))}">✕</button>
       </div>`;
     el.querySelector('.conn-item-info').addEventListener('click',()=>{switchTo(c.id);closeSettingsModal();});
     el.querySelector('.edit').addEventListener('click',e=>{e.stopPropagation();openEditModal(c.id);});
@@ -923,7 +1178,7 @@ document.getElementById('settingsModal').addEventListener('click',e=>{if(e.targe
 // ═══════════════════════════════════════════
 function openEditModal(id){
   editingId=id||null;
-  document.getElementById('editModalTitle').textContent=editingId?'Upravit střídač':'Přidat střídač';
+  document.getElementById('editModalTitle').textContent=editingId?t('editInverterTitle'):t('addInverterTitle');
   const $=x=>document.getElementById(x);
   if(!editingId){
     $('cfgName').value='';$('cfgHost').value='';$('cfgPassword').value='';
@@ -951,8 +1206,8 @@ document.getElementById('saveConn').addEventListener('click',()=>{
   const forwardedFor=document.getElementById('cfgForwardedFor').value.trim();
   let name=document.getElementById('cfgName').value.trim()||host;
 
-  if(!host){showToast('Zadejte IP adresu');return;}
-  if(!password){showToast('Zadejte heslo');return;}
+  if(!host){showToast(t('enterIP'));return;}
+  if(!password){showToast(t('enterPassword'));return;}
 
   const entry={host,password,protocol,interval,forwardedFor,name};
 
@@ -972,7 +1227,7 @@ document.getElementById('saveConn').addEventListener('click',()=>{
   updateSwitcher();
 
   if(editingId===activeId||connections.length===1) startPolling();
-  showToast('Uloženo ✓','success');
+  showToast(t('saved'),'success');
 });
 
 // ═══════════════════════════════════════════
@@ -982,7 +1237,7 @@ let pendingDeleteId=null;
 
 function confirmDelete(id,name){
   pendingDeleteId=id;
-  document.getElementById('confirmMsg').textContent=`Smazat „${name}"?`;
+  document.getElementById('confirmMsg').textContent=t('deleteConfirm').replace('{name}',name);
   document.getElementById('confirmOverlay').classList.add('open');
 }
 
@@ -999,7 +1254,7 @@ document.getElementById('confirmYes').addEventListener('click',()=>{
       startPolling();
     }
     renderConnList();updateSwitcher();
-    showToast('Smazáno','success');
+    showToast(t('deleted'),'success');
   }
   document.getElementById('confirmOverlay').classList.remove('open');pendingDeleteId=null;
 });
@@ -1029,6 +1284,7 @@ document.getElementById('dismissInstall').addEventListener('click',()=>document.
 // ═══════════════════════════════════════════
 //  Init
 // ═══════════════════════════════════════════
+applyLanguage();
 updateSwitcher();
 startPolling();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(e=>console.log('SW:',e));
