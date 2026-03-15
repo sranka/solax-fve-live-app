@@ -83,8 +83,9 @@
     font-size: 11px; color: var(--text-dim); font-weight: 400;
     max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .header-btn.refresh-btn.fetching { animation: header-spin 0.8s linear infinite; }
-  @keyframes header-spin { to { transform: rotate(360deg); } }
+  .refresh-icon { display: inline-block; transform: rotate(90deg); }
+  .header-btn.refresh-btn.fetching .refresh-icon { animation: header-spin 0.8s linear infinite; }
+  @keyframes header-spin { from { transform: rotate(90deg); } to { transform: rotate(450deg); } }
 
   .header-right { display: flex; align-items: center; gap: 6px; }
   .header-btn {
@@ -481,7 +482,7 @@
       <div class="switcher-dropdown" id="switcherDropdown"></div>
     </div>
     <button class="header-btn pause-btn" id="pauseBtn" aria-label="Pause">⏸</button>
-    <button class="header-btn refresh-btn" id="refreshBtn" aria-label="Refresh">&#8635;</button>
+    <button class="header-btn refresh-btn" id="refreshBtn" aria-label="Refresh"><span class="refresh-icon">&#8635;</span></button>
     <button class="header-btn" id="openSettings" aria-label="Settings">⚙</button>
   </div>
 </div>
