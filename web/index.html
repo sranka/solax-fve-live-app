@@ -1085,7 +1085,7 @@ function startPolling() {
   }
   document.getElementById('setupScreen').style.display='none';
   document.getElementById('dashboard').style.display='';
-  document.getElementById('headerSubtitle').textContent=cfg.protocol+'://'+cfg.host;
+  document.getElementById('headerSubtitle').textContent=cfg.name||cfg.host;
   const manual = cfg.manualRefresh;
   document.getElementById('pauseBtn').style.display = manual ? 'none' : '';
   fetchData();
