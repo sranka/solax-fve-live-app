@@ -12,9 +12,9 @@ Real-time monitoring app for **Solax X3 Hybrid G4** solar inverters. Connects di
 - Multiple inverter support with quick switching
 - Works as a standalone Android app or a web app in the browser
 
-## Screenshot
+## Screenshots
 
-<img src="docs/screenshot.png" width="320" alt="Solax FVE Monitor dashboard">
+<a href="docs/tablet-screenshot.png"><img src="docs/tablet-screenshot.png" width="400" alt="Solax FVE Monitor on Tablet"></a> <a href="docs/phone-screenshot.png"><img src="docs/phone-screenshot.png" width="130" alt="Solax FVE Monitor on Phone"></a>
 
 ## Requirements
 
