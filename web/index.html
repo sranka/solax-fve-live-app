@@ -201,9 +201,8 @@
     padding: 8px; font-size: 11px;
     color: var(--text-dim); font-family: 'JetBrains Mono', monospace;
   }
-  .form-check { display: flex; align-items: center; }
-  .form-check label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
-  .form-check input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+  .form-group.form-check label { display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 14px; margin-bottom: 0; }
+  .form-group.form-check input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); flex-shrink: 0; padding: 0; }
   .refresh-btn {
     background: rgba(255,255,255,0.06); border: 1px solid var(--card-border);
     color: var(--text-dim); border-radius: 8px;
@@ -613,13 +612,8 @@
       <label id="labelInterval"></label>
       <input type="number" id="cfgInterval" value="10" min="3" max="300" inputmode="numeric">
     </div>
-    <div class="form-group">
-      <label id="labelForwardedFor"></label>
-      <input type="text" id="cfgForwardedFor" placeholder="5.8.8.8" autocomplete="off">
-      <div class="form-hint" id="hintForwardedFor"></div>
-    </div>
     <div class="form-group form-check">
-      <label><input type="checkbox" id="cfgManualRefresh"> <span id="labelManualRefresh"></span></label>
+      <label><span id="labelManualRefresh"></span> <input type="checkbox" id="cfgManualRefresh"></label>
     </div>
 
     <button class="btn btn-primary" id="saveConn"></button>
@@ -855,8 +849,6 @@ function applyLanguage() {
   document.getElementById('hintPassword').textContent = t('passwordHint');
   document.getElementById('labelProtocol').textContent = t('protocol');
   document.getElementById('labelInterval').textContent = t('interval');
-  document.getElementById('labelForwardedFor').textContent = t('forwardedFor');
-  document.getElementById('hintForwardedFor').textContent = t('forwardedForHint');
   document.getElementById('labelManualRefresh').textContent = t('manualRefresh');
   document.getElementById('saveConn').textContent = t('save');
   document.getElementById('cancelEdit').textContent = t('cancel');
@@ -1188,14 +1180,13 @@ function openEditModal(id){
   const $=x=>document.getElementById(x);
   if(!editingId){
     $('cfgName').value='';$('cfgHost').value='';$('cfgPassword').value='';
-    $('cfgProtocol').value='http';$('cfgInterval').value='10';$('cfgForwardedFor').value='';
+    $('cfgProtocol').value='http';$('cfgInterval').value='10';
     $('cfgManualRefresh').checked=false;
   } else {
     const c=connections.find(x=>x.id===id);
     if(!c)return;
     $('cfgName').value=c.name||'';$('cfgHost').value=c.host||'';$('cfgPassword').value=c.password||'';
     $('cfgProtocol').value=c.protocol||'http';$('cfgInterval').value=c.interval||10;
-    $('cfgForwardedFor').value=c.forwardedFor||'';
     $('cfgManualRefresh').checked=!!c.manualRefresh;
   }
   $('editModal').classList.add('open');
@@ -1211,14 +1202,13 @@ document.getElementById('saveConn').addEventListener('click',()=>{
   const password=document.getElementById('cfgPassword').value.trim();
   const protocol=document.getElementById('cfgProtocol').value;
   const interval=parseInt(document.getElementById('cfgInterval').value)||10;
-  const forwardedFor=document.getElementById('cfgForwardedFor').value.trim();
   let name=document.getElementById('cfgName').value.trim()||host;
 
   if(!host){showToast(t('enterIP'));return;}
   if(!password){showToast(t('enterPassword'));return;}
 
   const manualRefresh=document.getElementById('cfgManualRefresh').checked;
-  const entry={host,password,protocol,interval,forwardedFor,name,manualRefresh};
+  const entry={host,password,protocol,interval,name,manualRefresh};
 
   if(editingId){
     const idx=connections.findIndex(c=>c.id===editingId);
