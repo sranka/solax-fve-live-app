@@ -8,7 +8,7 @@
     "dev:insecure": "open -a 'Google Chrome' --args --disable-web-security --user-data-dir=/tmp/chrome-dev-solax http://localhost:8080 & python3 -m http.server 8080 -d web",
     "build": "npm run build:android",
     "build:android": "sh stamp-build.sh && npx cap sync android && cd android && ./gradlew assembleDebug",
-    "build:ios": "sh stamp-build.sh && npx cap sync ios && cd ios/App && xcodebuild -project App.xcodeproj -scheme App -configuration Debug -sdk iphoneos build CODE_SIGN_IDENTITY=- AD_HOC_CODE_SIGNING_ALLOWED=YES",
+    "build:ios": "sh stamp-build.sh && npx cap sync ios && cd ios/App && xcodebuild -project App.xcodeproj -scheme App -configuration Debug -destination 'generic/platform=iOS Simulator' build CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=NO",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
