@@ -24,7 +24,7 @@ Real-time monitoring app for **Solax X3 Hybrid G4** solar inverters. Connects di
 ## Local Development
 
 ```bash
-DEV_PROXY_TARGET=http://192.168.199.192 npm start
+DEV_PROXY_TARGET=http://192.168.199.192 pnpm start
 ```
 
 Starts a Node.js dev server at [http://localhost:8080](http://localhost:8080) that serves the web app and proxies all POST requests to the inverter specified by `DEV_PROXY_TARGET`. This avoids CORS/mixed-content issues without any special browser flags. Without `DEV_PROXY_TARGET`, it serves static files only.
@@ -36,7 +36,7 @@ In the app's connection settings, set the inverter hostname to `localhost:8080` 
 If you prefer the old approach that launches Chrome with relaxed security:
 
 ```bash
-npm run dev:insecure
+pnpm run dev:insecure
 ```
 
 This opens Chrome with `--disable-web-security` and a separate profile so the app can directly call the inverter. Use only for local development.
@@ -54,8 +54,8 @@ The project uses [Capacitor](https://capacitorjs.com/) to wrap the web app into 
 ### Build APK
 
 ```bash
-npm install
-npm run build
+pnpm install
+pnpm run build
 ```
 
 The APK will be at `android/app/build/outputs/apk/debug/app-debug.apk`.
@@ -101,8 +101,8 @@ The project also uses [Capacitor](https://capacitorjs.com/) to wrap the web app 
 ### Build
 
 ```bash
-npm install
-npm run build:ios
+pnpm install
+pnpm run build:ios
 ```
 
 Alternatively, open the project in Xcode and build from there:
