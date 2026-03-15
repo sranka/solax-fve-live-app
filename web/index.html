@@ -1019,7 +1019,7 @@ function formatData(d) {
     Vdc1:d[10]/10, Vdc2:d[11]/10, Idc1:d[12]/10, Idc2:d[13]/10,
     EPSAVoltage:d[23]/10, EPSBVoltage:d[24]/10, EPSCVoltage:d[25]/10,
     EPSACurrent:r16s(d[26])/10, EPSBCurrent:r16s(d[27])/10, EPSCCurrent:r16s(d[28])/10,
-    BatteryCapacity:d[103], BatteryVoltage:r32u(d[169],d[170])/100,
+    BatteryCapacity:d[103], BatteryVoltage:r32u(d[169],d[170])/100, BatteryRemainingEnergy:d[106]/10,
     BatteryTemperature:r16s(d[105]),
     GridAVoltage:d[0]/10, GridBVoltage:d[1]/10, GridCVoltage:d[2]/10,
     GridACurrent:r16s(d[3])/10, GridBCurrent:r16s(d[4])/10, GridCCurrent:r16s(d[5])/10,
@@ -1084,8 +1084,9 @@ function updateUI(d) {
   bE.textContent=Math.abs(d.BAT_Power);
   bE.className='flow-node-value '+(d.BAT_Power<0?'discharging':d.BAT_Power>0?'charging':'');
   bE.parentElement.querySelector('.flow-node-unit').textContent='W '+(d.BAT_Power<0?t('battDischarging'):d.BAT_Power>0?t('battCharging'):'idle');
-  $('batterySOC').textContent=d.BatteryCapacity+'%';
-  $('battSOCDetail').textContent=d.BatteryCapacity+'%';
+  const batterySOC=d.BatteryCapacity+'%'+(d.BatteryRemainingEnergy>0?' / '+d.BatteryRemainingEnergy.toFixed(1)+' kWh':'');
+  $('batterySOC').textContent=batterySOC;
+  $('battSOCDetail').textContent=batterySOC;
   $('battPowerDetail').textContent=d.BAT_Power+' W';
   $('battVoltage').textContent=d.BatteryVoltage.toFixed(1)+' V';
   $('battTemp').textContent=d.BatteryTemperature+' °C';
