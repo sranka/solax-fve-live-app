@@ -1,6 +1,6 @@
 # Solax FVE Monitor
 
-Real-time monitoring app for Solax solar inverters, tested with **Solax X3 Hybrid G4**. Connects directly to the inverter's local API within your home network and displays live power data, battery status, grid details, and energy statistics.
+Real-time monitoring app for Solax solar inverters, tested with **Solax X3 Hybrid G4** with **WiFi 3.0 dongle**. Connects directly to the inverter's local API within your home network and displays live power data, battery status, grid details, and energy statistics.
 
 ## Features
 
