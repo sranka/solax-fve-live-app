@@ -145,7 +145,7 @@ function modbusToHttpData(regs1, regs2, regs3) {
   const d = new Array(171).fill(0);
 
   // regs1: start 0x0003, count 37 (0x0003–0x0027)
-  // regs2: start 0x0046, count 6  (0x0046–0x004B)
+  // regs2: start 0x0046, count 6  (0x0046–0x0053)
   // regs3: start 0x006A, count 45 (0x006A–0x0096)
   const r1 = (addr) => regs1[addr - 0x0003];
   const r2 = (addr) => regs2[addr - 0x0046];
@@ -197,9 +197,9 @@ function modbusToHttpData(regs1, regs2, regs3) {
   d[41] = r1(0x0016);
 
   // Yield total/today (read 3)
-  d[68] = r3(0x0094);  // Yield_Total high word
-  d[69] = r3(0x0095);  // Yield_Total low word
-  d[70] = r3(0x0096);  // Yield_Today
+  d[68] = r2(0x0052);  // Etotal_togrid high word seems to match Yield_Total high word in HTTP API
+  d[69] = r2(0x0053);  // Etotal_togrid low word seems to match Yield_Total low word in HTTP API
+  d[70] = r2(0x0050);  // Etoday_togrid seems to match Yield_Today in HTTP API
 
   // Feed-in / consume energy totals (read 2) — 32-bit unsigned
   d[86] = r2(0x0048);  // FeedInEnergy high
@@ -343,7 +343,7 @@ async function handleModbus(req, res) {
 
     const [regs1, regs2, regs3] = await modbusReadRegisters(host, port, unitId, fc, [
       { start: 0x0003, count: 37 },
-      { start: 0x0046, count: 6 },
+      { start: 0x0046, count: 14 },
       { start: 0x006A, count: 45 },
     ]);
 
