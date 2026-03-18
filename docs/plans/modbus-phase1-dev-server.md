@@ -33,9 +33,9 @@ Add a `/modbus` POST endpoint to the Node.js dev server that connects to a Solax
 - See mapping table in [modbus-tcp-support.md](modbus-tcp-support.md)
 
 **Add `/modbus` POST handler**:
-- Reads `DEV_MODBUS_TARGET` env var (e.g., `192.168.1.10` or `192.168.1.10:502`)
+- Modbus host is derived from the hostname of `DEV_PROXY_TARGET` (e.g., `DEV_PROXY_TARGET=http://192.168.1.10` → Modbus host `192.168.1.10`). Optionally, `DEV_MODBUS_TARGET` can override the host/port (e.g., `192.168.1.10:503`).
 - On POST to `/modbus`:
-  1. Parse host:port from `DEV_MODBUS_TARGET` (default port 502)
+  1. Parse host:port from `DEV_MODBUS_TARGET` if set, otherwise extract hostname from `DEV_PROXY_TARGET` (default port 502)
   2. Execute 3 Modbus reads (FC 0x04):
      - Read 1: start 0x0003, count 37
      - Read 2: start 0x0046, count 6
@@ -44,48 +44,40 @@ Add a `/modbus` POST endpoint to the Node.js dev server that connects to a Solax
   4. Return JSON response: `{"type":"X3-Hybrid G4","sn":"MODBUS","ver":"3.006.04","Data":[...],"Information":[0,0,0,0,0,0,0,0,"MODBUS"]}`
 - Error handling: return 502 with error message on connection failure
 
-**Existing routes unchanged**:
-- `POST /` → still proxies to `DEV_PROXY_TARGET` (WiFi dongle HTTP API)
+**Route handlers**:
+- `POST /http` → always proxies to `DEV_PROXY_TARGET` (WiFi dongle HTTP API)
+- `POST /modbus` → always reads via Modbus TCP (host from `DEV_MODBUS_TARGET` or `DEV_PROXY_TARGET` hostname)
+- `POST /` → routes to `/modbus` when `DEV_MODBUS=1`, otherwise to `/http` (see revised routing below)
 - `GET *` → still serves static files from `web/`
+
+The explicit `/http` and `/modbus` endpoints are always available (assuming `DEV_PROXY_TARGET` is set), enabling side-by-side comparison regardless of the default POST routing.
+
+**Revised routing for `POST /`**: The `DEV_MODBUS` env var flag controls which backend the default `POST /` uses. When set (e.g., `DEV_MODBUS=1`), `POST /` goes through Modbus; otherwise it proxies via HTTP. The Modbus host is extracted from `DEV_PROXY_TARGET`'s hostname, with an optional `DEV_MODBUS_TARGET` override. No app changes needed — just set the env var and the dev server serves Modbus data transparently.
 
 ### Usage
 
 ```bash
-# Both HTTP proxy and Modbus bridge:
-DEV_PROXY_TARGET=http://192.168.1.10 DEV_MODBUS_TARGET=192.168.1.10 pnpm start
-
-# Modbus only (no HTTP proxy needed):
-DEV_MODBUS_TARGET=192.168.1.10 pnpm start
-```
-
-In the app, configure a connection with:
-- Protocol: HTTP
-- Host: `localhost:8080/modbus` (or just configure the dev server proxy path)
-
-Actually, simpler: the app POSTs to `/` with the body `optType=ReadRealTimeData&pwd=...`. The dev server can detect a query param or a different path. Since the app always POSTs to the root, we need a way to route to Modbus.
-
-**Revised routing approach**: Add a `DEV_MODBUS_TARGET` env var. When set, ALL POST requests to the dev server go through Modbus (instead of proxying to `DEV_PROXY_TARGET`). When both are set, `DEV_MODBUS_TARGET` takes precedence. This way no app changes needed — just set the env var and the dev server serves Modbus data transparently.
-
-### Revised Usage
-
-```bash
-# Use Modbus to read from inverter (app connects to localhost:8080 as usual):
-DEV_MODBUS_TARGET=192.168.1.10 pnpm start
-
 # Use HTTP proxy to WiFi dongle (existing behavior):
+# POST / → HTTP proxy, POST /http → HTTP proxy, POST /modbus → Modbus
 DEV_PROXY_TARGET=http://192.168.1.10 pnpm start
 
-# Both available (Modbus takes precedence for POST):
-DEV_MODBUS_TARGET=192.168.1.10 DEV_PROXY_TARGET=http://192.168.1.10 pnpm start
+# Use Modbus as default (host derived from DEV_PROXY_TARGET):
+# POST / → Modbus, POST /http → HTTP proxy, POST /modbus → Modbus
+DEV_MODBUS=1 DEV_PROXY_TARGET=http://192.168.1.10 pnpm start
+
+# Override Modbus host/port (e.g., non-standard port):
+DEV_MODBUS=1 DEV_PROXY_TARGET=http://192.168.1.10 DEV_MODBUS_TARGET=192.168.1.10:503 pnpm start
 ```
 
 ## Verification
 
-1. Start dev server with `DEV_MODBUS_TARGET` pointing to a real inverter
+1. Start dev server with `DEV_PROXY_TARGET=http://<inverter-ip>` pointing to a real inverter
 2. Open `http://localhost:8080` in browser
-3. Configure a connection in the app: protocol HTTP, host `localhost:8080`, password (any value)
-4. Verify all dashboard values match what you see through the WiFi dongle HTTP API
-5. Compare side-by-side: run two browser tabs, one via Modbus bridge, one via HTTP proxy to WiFi dongle
+3. Compare side-by-side using explicit endpoints:
+   - `curl -X POST localhost:8080/http -d 'optType=ReadRealTimeData&pwd=...'` → WiFi dongle response
+   - `curl -X POST localhost:8080/modbus` → Modbus bridge response
+4. Verify all values match between `/http` and `/modbus` responses
+5. Test default routing: add `DEV_MODBUS=1`, confirm `POST /` returns Modbus data
 6. Tune any mapping discrepancies in `modbusToHttpData()` and iterate
 
 ## Key Benefit
