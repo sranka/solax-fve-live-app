@@ -35,19 +35,29 @@ function getModbusHostPort() {
 
 // --- Modbus TCP client ---
 
-function modbusReadRegisters(host, port, unitId, fc, reads) {
+const MODBUS_MAX_REGS = 125;
+
+function modbusReadRegisters(host, port, unitId, fc, startAddr, endAddr) {
+  const count = endAddr - startAddr + 1;
+  // Split into chunks of MODBUS_MAX_REGS
+  const chunks = [];
+  for (let off = 0; off < count; off += MODBUS_MAX_REGS) {
+    const chunkCount = Math.min(MODBUS_MAX_REGS, count - off);
+    chunks.push({ start: startAddr + off, count: chunkCount });
+  }
+
   return new Promise((resolve, reject) => {
     const socket = new net.Socket();
-    const results = [];
-    let currentRead = 0;
+    const allRegisters = [];
+    let currentChunk = 0;
     let responseData = Buffer.alloc(0);
     let readTimer;
 
-    function addrHex(idx) {
-      return '0x' + reads[idx].start.toString(16).padStart(4, '0');
+    function chunkAddrHex() {
+      return '0x' + chunks[currentChunk].start.toString(16).padStart(4, '0');
     }
 
-    function buildRequest(startAddr, quantity) {
+    function buildRequest(addr, quantity) {
       const transactionId = Math.floor(Math.random() * 0xFFFF);
       const buf = Buffer.alloc(12);
       buf.writeUInt16BE(transactionId, 0);
@@ -55,21 +65,21 @@ function modbusReadRegisters(host, port, unitId, fc, reads) {
       buf.writeUInt16BE(6, 4);
       buf.writeUInt8(unitId, 6);
       buf.writeUInt8(fc, 7);
-      buf.writeUInt16BE(startAddr, 8);
+      buf.writeUInt16BE(addr, 8);
       buf.writeUInt16BE(quantity, 10);
       return buf;
     }
 
     function sendNext() {
-      const { start, count } = reads[currentRead];
-      const req = buildRequest(start, count);
+      const { start, count: qty } = chunks[currentChunk];
+      const req = buildRequest(start, qty);
       responseData = Buffer.alloc(0);
-      console.log(`[modbus] request ${currentRead + 1}/${reads.length} (${addrHex(currentRead)}) qty=${count}: ${req.toString('hex')}`);
+      console.log(`[modbus] request ${currentChunk + 1}/${chunks.length} (${chunkAddrHex()}) qty=${qty}: ${req.toString('hex')}`);
       clearTimeout(readTimer);
       readTimer = setTimeout(() => {
-        console.log(`[modbus] READ TIMEOUT (${addrHex(currentRead)}) after 5s, received ${responseData.length} bytes: ${responseData.toString('hex')}`);
+        console.log(`[modbus] READ TIMEOUT (${chunkAddrHex()}) after 5s, received ${responseData.length} bytes: ${responseData.toString('hex')}`);
         cleanup();
-        reject(new Error(`Modbus read timeout at ${addrHex(currentRead)} from ${host}:${port}`));
+        reject(new Error(`Modbus read timeout at ${chunkAddrHex()} from ${host}:${port}`));
       }, 5000);
       socket.write(req);
     }
@@ -87,43 +97,41 @@ function modbusReadRegisters(host, port, unitId, fc, reads) {
 
     socket.connect(port, host, () => {
       clearTimeout(connectTimer);
-      console.log(`[modbus] connected to ${host}:${port}, sending ${reads.length} reads`);
+      console.log(`[modbus] connected to ${host}:${port}, reading ${count} registers from 0x${startAddr.toString(16).padStart(4, '0')} in ${chunks.length} chunk(s)`);
       sendNext();
     });
 
     socket.on('data', (chunk) => {
-      console.log(`[modbus] data chunk (${addrHex(currentRead)}): ${chunk.length} bytes: ${chunk.toString('hex')}`);
+      console.log(`[modbus] data chunk (${chunkAddrHex()}): ${chunk.length} bytes: ${chunk.toString('hex')}`);
       responseData = Buffer.concat([responseData, chunk]);
       if (responseData.length < 9) return;
       const respLength = responseData.readUInt16BE(4);
       if (responseData.length < 6 + respLength) return;
 
       clearTimeout(readTimer);
-      console.log(`[modbus] response complete (${addrHex(currentRead)}): ${responseData.length} bytes`);
+      console.log(`[modbus] response complete (${chunkAddrHex()}): ${responseData.length} bytes`);
 
       const respFc = responseData.readUInt8(7);
       if (respFc & 0x80) {
         const errorCode = responseData.readUInt8(8);
-        console.log(`[modbus] ERROR (${addrHex(currentRead)}): FC=0x${respFc.toString(16)} code=${errorCode}`);
+        console.log(`[modbus] ERROR (${chunkAddrHex()}): FC=0x${respFc.toString(16)} code=${errorCode}`);
         cleanup();
-        reject(new Error(`Modbus error at ${addrHex(currentRead)}: FC=0x${respFc.toString(16)} code=${errorCode}`));
+        reject(new Error(`Modbus error at ${chunkAddrHex()}: FC=0x${respFc.toString(16)} code=${errorCode}`));
         return;
       }
 
       const byteCount = responseData.readUInt8(8);
-      const registers = [];
       for (let i = 0; i < byteCount; i += 2) {
-        registers.push(responseData.readUInt16BE(9 + i));
+        allRegisters.push(responseData.readUInt16BE(9 + i));
       }
-      console.log(`[modbus] OK (${addrHex(currentRead)}): ${registers.length} registers`);
-      results.push(registers);
+      console.log(`[modbus] OK (${chunkAddrHex()}): ${byteCount / 2} registers, total ${allRegisters.length}/${count}`);
 
-      currentRead++;
-      if (currentRead < reads.length) {
+      currentChunk++;
+      if (currentChunk < chunks.length) {
         sendNext();
       } else {
         cleanup();
-        resolve(results);
+        resolve(allRegisters);
       }
     });
 
@@ -132,7 +140,7 @@ function modbusReadRegisters(host, port, unitId, fc, reads) {
     });
 
     socket.on('error', (err) => {
-      console.log(`[modbus] SOCKET ERROR (${addrHex(currentRead)}): ${err.message}`);
+      console.log(`[modbus] SOCKET ERROR (${chunkAddrHex()}): ${err.message}`);
       cleanup();
       reject(err);
     });
@@ -141,85 +149,79 @@ function modbusReadRegisters(host, port, unitId, fc, reads) {
 
 // --- Modbus-to-HTTP data mapping ---
 
-function modbusToHttpData(regs1, regs2, regs3) {
+function modbusToHttpData(regs, startAddr) {
   const d = new Array(171).fill(0);
+  const r = (addr) => regs[addr - startAddr];
 
-  // regs1: start 0x0003, count 37 (0x0003–0x0027)
-  // regs2: start 0x0046, count 6  (0x0046–0x0053)
-  // regs3: start 0x006A, count 45 (0x006A–0x0096)
-  const r1 = (addr) => regs1[addr - 0x0003];
-  const r2 = (addr) => regs2[addr - 0x0046];
-  const r3 = (addr) => regs3[addr - 0x006A];
+  // Grid voltage/current/power
+  d[0] = r(0x006A);   // GridAVoltage
+  d[1] = r(0x006E);   // GridBVoltage
+  d[2] = r(0x0072);   // GridCVoltage
+  d[3] = r(0x006B);   // GridACurrent (int16, app interprets as signed)
+  d[4] = r(0x006F);   // GridBCurrent
+  d[5] = r(0x0073);   // GridCCurrent
+  d[6] = r(0x006C);   // GridAPower
+  d[7] = r(0x0070);   // GridBPower
+  d[8] = r(0x0074);   // GridCPower
 
-  // Grid voltage/current/power (read 3)
-  d[0] = r3(0x006A);   // GridAVoltage
-  d[1] = r3(0x006E);   // GridBVoltage
-  d[2] = r3(0x0072);   // GridCVoltage
-  d[3] = r3(0x006B);   // GridACurrent (int16, app interprets as signed)
-  d[4] = r3(0x006F);   // GridBCurrent
-  d[5] = r3(0x0073);   // GridCCurrent
-  d[6] = r3(0x006C);   // GridAPower
-  d[7] = r3(0x0070);   // GridBPower
-  d[8] = r3(0x0074);   // GridCPower
+  // PV
+  d[10] = r(0x0003);  // Vdc1
+  d[11] = r(0x0004);  // Vdc2
+  d[12] = r(0x0005);  // Idc1
+  d[13] = r(0x0006);  // Idc2
+  d[14] = r(0x000A);  // PowerDc1
+  d[15] = r(0x000B);  // PowerDc2
 
-  // PV (read 1)
-  d[10] = r1(0x0003);  // Vdc1
-  d[11] = r1(0x0004);  // Vdc2
-  d[12] = r1(0x0005);  // Idc1
-  d[13] = r1(0x0006);  // Idc2
-  d[14] = r1(0x000A);  // PowerDc1
-  d[15] = r1(0x000B);  // PowerDc2
+  // Grid frequency
+  d[16] = r(0x006D);  // FreqacA
+  d[17] = r(0x0071);  // FreqacB
+  d[18] = r(0x0075);  // FreqacC
 
-  // Grid frequency (read 3)
-  d[16] = r3(0x006D);  // FreqacA
-  d[17] = r3(0x0071);  // FreqacB
-  d[18] = r3(0x0075);  // FreqacC
+  // RunMode
+  d[19] = r(0x0009);
 
-  // RunMode (read 1)
-  d[19] = r1(0x0009);
+  // EPS / Off-grid
+  d[23] = r(0x0076);  // EPSAVoltage
+  d[24] = r(0x007A);  // EPSBVoltage
+  d[25] = r(0x007E);  // EPSCVoltage
+  d[26] = r(0x0077);  // EPSACurrent
+  d[27] = r(0x007B);  // EPSBCurrent
+  d[28] = r(0x007F);  // EPSCCurrent
+  d[29] = r(0x0078);  // EPSAPower
+  d[30] = r(0x007C);  // EPSBPower
+  d[31] = r(0x0080);  // EPSCPower
 
-  // EPS / Off-grid (read 3)
-  d[23] = r3(0x0076);  // EPSAVoltage
-  d[24] = r3(0x007A);  // EPSBVoltage
-  d[25] = r3(0x007E);  // EPSCVoltage
-  d[26] = r3(0x0077);  // EPSACurrent
-  d[27] = r3(0x007B);  // EPSBCurrent
-  d[28] = r3(0x007F);  // EPSCCurrent
-  d[29] = r3(0x0078);  // EPSAPower
-  d[30] = r3(0x007C);  // EPSBPower
-  d[31] = r3(0x0080);  // EPSCPower
+  // Feed-in power — 32-bit signed, two registers map directly
+  d[34] = r(0x0046);  // feedInPower low word
+  d[35] = r(0x0047);  // feedInPower high word
 
-  // Feed-in power (read 2) — 32-bit signed, two registers map directly
-  d[34] = r2(0x0046);  // feedInPower high word
-  d[35] = r2(0x0047);  // feedInPower low word
+  // Battery power — int16
+  d[41] = r(0x0016);
 
-  // Battery power (read 1) — int16
-  d[41] = r1(0x0016);
+  // Yield total/today
+  d[68] = r(0x0052);  // Etotal_togrid low word
+  d[69] = r(0x0053);  // Etotal_togrid high word
+  d[70] = r(0x0050);  // Etoday_togrid
 
-  // Yield total/today (read 3)
-  d[68] = r2(0x0052);  // Etotal_togrid high word seems to match Yield_Total high word in HTTP API
-  d[69] = r2(0x0053);  // Etotal_togrid low word seems to match Yield_Total low word in HTTP API
-  d[70] = r2(0x0050);  // Etoday_togrid seems to match Yield_Today in HTTP API
+  // Feed-in / consume energy totals — 32-bit unsigned
+  d[86] = r(0x0048);  // FeedInEnergy low
+  d[87] = r(0x0049);  // FeedInEnergy high
+  d[88] = r(0x004A);  // ConsumeEnergy low
+  d[89] = r(0x004B);  // ConsumeEnergy high
 
-  // Feed-in / consume energy totals (read 2) — 32-bit unsigned
-  d[86] = r2(0x0048);  // FeedInEnergy high
-  d[87] = r2(0x0049);  // FeedInEnergy low
-  d[88] = r2(0x004A);  // ConsumeEnergy high
-  d[89] = r2(0x004B);  // ConsumeEnergy low
-
-  // Battery state (read 1)
-  d[103] = r1(0x001C); // BatteryCapacity (%)
-  d[105] = r1(0x0018); // BatteryTemperature (int16, °C)
+  // Battery state
+  d[103] = r(0x001C); // BatteryCapacity (%)
+  d[105] = r(0x0018); // BatteryTemperature (int16, °C)
 
   // BatteryRemainingEnergy: Modbus uint32 Wh → d[106] in 0.1 kWh units
   // d[106]/10 = kWh, so d[106] = Wh / 100
   // Solax 32-bit: low word first (0x0026), high word second (0x0027)
-  const battRemWh = r1(0x0026) + 65536 * r1(0x0027);
+  const battRemWh = r(0x0026) + 65536 * r(0x0027);
   d[106] = Math.round(battRemWh / 100);
 
   // BatteryVoltage: Modbus reg/10 → V, HTTP r32u(d[169],d[170])/100 → V
   // r32u(a,b) = a + 65536*b, so a=low word, b=high word
-  d[169] = r1(0x0014) * 10;
+  d[169] = r(0x0014) * 10;
   d[170] = 0;
 
   return d;
@@ -341,13 +343,10 @@ async function handleModbus(req, res) {
     const unitId = 1;
     const fc = 0x04;
 
-    const [regs1, regs2, regs3] = await modbusReadRegisters(host, port, unitId, fc, [
-      { start: 0x0003, count: 37 },
-      { start: 0x0046, count: 14 },
-      { start: 0x006A, count: 45 },
-    ]);
+    // Read 0x0003–0x0096 (148 registers), auto-split into chunks
+    const regs = await modbusReadRegisters(host, port, unitId, fc, 0x0003, 0x0096);
 
-    const data = modbusToHttpData(regs1, regs2, regs3);
+    const data = modbusToHttpData(regs, 0x0003);
     const result = {
       creator: 'modbus-proxy:1.0',
       type: 'X3-Hybrid G4',
@@ -386,9 +385,7 @@ async function handleModbusRead(req, res, addrHex) {
 
   try {
     const { host, port } = target;
-    const [regs] = await modbusReadRegisters(host, port, 1, 0x04, [
-      { start: startAddr, count: 2 },
-    ]);
+    const regs = await modbusReadRegisters(host, port, 1, 0x04, startAddr, startAddr + 1);
 
     const [a, b] = regs;
     const result = {
