@@ -2,9 +2,9 @@
   "name": "solax-x3-hybrid-g4",
   "version": "1.1.2",
   "description": "",
-  "main": "scripts/dev-server.js",
+  "main": "scripts/server.js",
   "scripts": {
-    "start": "sh scripts/stamp-build.sh && node scripts/dev-server.js",
+    "start": "sh scripts/stamp-build.sh && node scripts/server.js",
     "dev:insecure": "open -a 'Google Chrome' --args --disable-web-security --user-data-dir=/tmp/chrome-dev-solax http://localhost:8080 & python3 -m http.server 8080 -d web",
     "build": "pnpm run build:android",
     "build:android": "sh scripts/stamp-build.sh && npx cap sync android && cd android && ./gradlew assembleDebug",

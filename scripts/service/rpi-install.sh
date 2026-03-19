@@ -21,7 +21,7 @@ error() { echo "ERROR: $*" >&2; exit 1; }
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SRC_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
-[ -f "$SRC_DIR/scripts/dev-server.js" ] || error "Cannot find source files. Run from the project root or check paths."
+[ -f "$SRC_DIR/scripts/server.js" ] || error "Cannot find source files. Run from the project root or check paths."
 
 # --- System user ---
 
@@ -36,7 +36,7 @@ fi
 info "Copying application files to $APP_DIR"
 mkdir -p "$APP_DIR/scripts" "$APP_DIR/web"
 
-cp "$SRC_DIR/scripts/dev-server.js"  "$APP_DIR/scripts/"
+cp "$SRC_DIR/scripts/server.js"  "$APP_DIR/scripts/"
 cp "$SRC_DIR/scripts/stamp-build.sh" "$APP_DIR/scripts/"
 cp "$SRC_DIR/package.json"           "$APP_DIR/"
 

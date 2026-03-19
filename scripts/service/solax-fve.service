@@ -9,7 +9,7 @@ User=solax
 Group=solax
 WorkingDirectory=/opt/solax-fve
 ExecStartPre=/bin/sh scripts/stamp-build.sh
-ExecStart=/usr/bin/node scripts/dev-server.js
+ExecStart=/usr/bin/node scripts/server.js
 Restart=always
 RestartSec=10
 

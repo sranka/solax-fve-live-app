@@ -33,7 +33,7 @@ From the machine where you have the repository checked out:
 ```bash
 PI_HOST=pi@raspberrypi.local
 
-tar czf /tmp/solax-fve.tar.gz scripts/dev-server.js scripts/stamp-build.sh scripts/service/ web/ package.json
+tar czf /tmp/solax-fve.tar.gz scripts/server.js scripts/stamp-build.sh scripts/service/ web/ package.json
 scp /tmp/solax-fve.tar.gz $PI_HOST:/tmp/
 
 ssh $PI_HOST "sudo mkdir -p /opt/solax-fve && \
@@ -55,7 +55,7 @@ Then run the install script (see next section).
 ```bash
 cd /tmp/solax-fve-src
 sudo sh scripts/stamp-build.sh
-MODBUS=0 PROXY_TARGET=http://<INVERTER_IP> node scripts/dev-server.js
+MODBUS=0 PROXY_TARGET=http://<INVERTER_IP> node scripts/server.js
 ```
 
 Open `http://<PI_IP>:8080` in a browser to verify the app works.

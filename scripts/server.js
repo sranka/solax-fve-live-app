@@ -7,6 +7,7 @@ const PORT = parseInt(process.env.PORT || '8080', 10);
 const PROXY_TARGET = process.env.PROXY_TARGET || '';
 const MODBUS_TARGET = process.env.MODBUS_TARGET || '';
 const MODBUS_DEFAULT = process.env.MODBUS === '1';
+const MODBUS_DEBUG = !!process.env.MODBUS_DEBUG;
 const WEB_DIR = path.join(__dirname, '..', 'web');
 
 const MIME_TYPES = {
@@ -74,10 +75,10 @@ function modbusReadRegisters(host, port, unitId, fc, startAddr, endAddr) {
       const { start, count: qty } = chunks[currentChunk];
       const req = buildRequest(start, qty);
       responseData = Buffer.alloc(0);
-      console.log(`[modbus] request ${currentChunk + 1}/${chunks.length} (${chunkAddrHex()}) qty=${qty}: ${req.toString('hex')}`);
+      if (MODBUS_DEBUG) console.log(`[modbus] request ${currentChunk + 1}/${chunks.length} (${chunkAddrHex()}) qty=${qty}: ${req.toString('hex')}`);
       clearTimeout(readTimer);
       readTimer = setTimeout(() => {
-        console.log(`[modbus] READ TIMEOUT (${chunkAddrHex()}) after 5s, received ${responseData.length} bytes: ${responseData.toString('hex')}`);
+        console.error(`[modbus] READ TIMEOUT (${chunkAddrHex()}) after 5s, received ${responseData.length} bytes: ${responseData.toString('hex')}`);
         cleanup();
         reject(new Error(`Modbus read timeout at ${chunkAddrHex()} from ${host}:${port}`));
       }, 5000);
@@ -90,31 +91,31 @@ function modbusReadRegisters(host, port, unitId, fc, startAddr, endAddr) {
     };
 
     const connectTimer = setTimeout(() => {
-      console.log(`[modbus] CONNECT TIMEOUT after 5s to ${host}:${port}`);
+      console.error(`[modbus] CONNECT TIMEOUT after 5s to ${host}:${port}`);
       cleanup();
       reject(new Error(`Modbus connect timeout to ${host}:${port}`));
     }, 5000);
 
     socket.connect(port, host, () => {
       clearTimeout(connectTimer);
-      console.log(`[modbus] connected to ${host}:${port}, reading ${count} registers from 0x${startAddr.toString(16).padStart(4, '0')} in ${chunks.length} chunk(s)`);
+      if (MODBUS_DEBUG) console.log(`[modbus] connected to ${host}:${port}, reading ${count} registers from 0x${startAddr.toString(16).padStart(4, '0')} in ${chunks.length} chunk(s)`);
       sendNext();
     });
 
     socket.on('data', (chunk) => {
-      console.log(`[modbus] data chunk (${chunkAddrHex()}): ${chunk.length} bytes: ${chunk.toString('hex')}`);
+      if (MODBUS_DEBUG) console.log(`[modbus] data chunk (${chunkAddrHex()}): ${chunk.length} bytes: ${chunk.toString('hex')}`);
       responseData = Buffer.concat([responseData, chunk]);
       if (responseData.length < 9) return;
       const respLength = responseData.readUInt16BE(4);
       if (responseData.length < 6 + respLength) return;
 
       clearTimeout(readTimer);
-      console.log(`[modbus] response complete (${chunkAddrHex()}): ${responseData.length} bytes`);
+      if (MODBUS_DEBUG) console.log(`[modbus] response complete (${chunkAddrHex()}): ${responseData.length} bytes`);
 
       const respFc = responseData.readUInt8(7);
       if (respFc & 0x80) {
         const errorCode = responseData.readUInt8(8);
-        console.log(`[modbus] ERROR (${chunkAddrHex()}): FC=0x${respFc.toString(16)} code=${errorCode}`);
+        if (MODBUS_DEBUG) console.log(`[modbus] ERROR (${chunkAddrHex()}): FC=0x${respFc.toString(16)} code=${errorCode}`);
         cleanup();
         reject(new Error(`Modbus error at ${chunkAddrHex()}: FC=0x${respFc.toString(16)} code=${errorCode}`));
         return;
@@ -124,7 +125,7 @@ function modbusReadRegisters(host, port, unitId, fc, startAddr, endAddr) {
       for (let i = 0; i < byteCount; i += 2) {
         allRegisters.push(responseData.readUInt16BE(9 + i));
       }
-      console.log(`[modbus] OK (${chunkAddrHex()}): ${byteCount / 2} registers, total ${allRegisters.length}/${count}`);
+      if (MODBUS_DEBUG) console.log(`[modbus] OK (${chunkAddrHex()}): ${byteCount / 2} registers, total ${allRegisters.length}/${count}`);
 
       currentChunk++;
       if (currentChunk < chunks.length) {
@@ -136,11 +137,11 @@ function modbusReadRegisters(host, port, unitId, fc, startAddr, endAddr) {
     });
 
     socket.on('close', (hadError) => {
-      console.log(`[modbus] socket closed hadError=${hadError}`);
+      if (MODBUS_DEBUG) console.log(`[modbus] socket closed hadError=${hadError}`);
     });
 
     socket.on('error', (err) => {
-      console.log(`[modbus] SOCKET ERROR (${chunkAddrHex()}): ${err.message}`);
+      console.error(`[modbus] SOCKET ERROR (${chunkAddrHex()}): ${err.message}`);
       cleanup();
       reject(err);
     });
