@@ -27,7 +27,8 @@ SRC_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 if ! id "$SERVICE_USER" &>/dev/null; then
   info "Creating system user: $SERVICE_USER"
-  adduser --system --group --no-create-home --home "$APP_DIR" --shell /usr/sbin/nologin "$SERVICE_USER"
+  groupadd --system "$SERVICE_USER" 2>/dev/null || true
+  useradd --system --gid "$SERVICE_USER" --no-create-home --home-dir "$APP_DIR" --shell /usr/sbin/nologin "$SERVICE_USER"
 fi
 
 # --- Application files ---
