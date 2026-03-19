@@ -2,6 +2,7 @@
 # Install or update Solax FVE Monitor on Raspberry Pi.
 # Run as root: sudo bash scripts/service/rpi-install.sh
 set -euo pipefail
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 
 APP_DIR=/opt/solax-fve
 SERVICE_NAME=solax-fve
