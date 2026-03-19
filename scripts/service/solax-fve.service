@@ -1,0 +1,25 @@
+[Unit]
+Description=Solax FVE Monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=solax
+Group=solax
+WorkingDirectory=/opt/solax-fve
+ExecStartPre=/bin/sh scripts/stamp-build.sh
+ExecStart=/usr/bin/node scripts/dev-server.js
+Restart=always
+RestartSec=10
+
+EnvironmentFile=/etc/default/solax-fve
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/solax-fve/web
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target
