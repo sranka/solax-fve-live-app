@@ -129,18 +129,9 @@ Then select your target device or simulator and hit **Product > Build** (⌘B).
 5. Hit **Run** (⌘R) — Xcode will build, install, and launch the app on your phone
 6. On first install, you may need to trust the developer certificate on your iPhone: **Settings > General > VPN & Device Management**
 
-## Inverter API
+## Remote Hosting
 
-The app communicates with the Solax inverter via a simple HTTP POST:
-
-```
-POST http://<inverter-ip>/
-Content-Type: application/x-www-form-urlencoded
-
-optType=ReadRealTimeData&pwd=<dongle-password>
-```
-
-The response is a JSON object with a `Data` array containing register values for the X3 Hybrid G4.
+The web application can be deployed as a server to expose the inverter API remotely — for example, on a Raspberry Pi with a [Cloudflare Tunnel](docs/remote-hosting-through-raspberry-pi.md).
 
 ## License
 
