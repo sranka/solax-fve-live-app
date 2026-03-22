@@ -338,6 +338,10 @@ function handleHttpProxy(req, res) {
   });
 }
 
+let modbusCache = { data: null, time: 0 };
+let modbusPending = null;
+const MODBUS_MIN_INTERVAL = 300;
+
 async function handleModbus(req, res) {
   const target = getModbusHostPort();
   if (!target) {
@@ -351,29 +355,49 @@ async function handleModbus(req, res) {
   await new Promise(resolve => req.on('end', resolve));
 
   try {
-    const { host, port } = target;
-    const unitId = 1;
-    const fc = 0x04;
+    const now = Date.now();
+    if (modbusCache.data && now - modbusCache.time < MODBUS_MIN_INTERVAL) {
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(modbusCache.data);
+      return;
+    }
 
-    // Read 0x0003–0x0096 (148 registers), auto-split into chunks
-    const regs = await modbusReadRegisters(host, port, unitId, fc, 0x0003, 0x009B);
+    // If a read is already in progress, wait for it instead of starting another
+    if (!modbusPending) {
+      const { host, port } = target;
+      const unitId = 1;
+      const fc = 0x04;
 
-    const data = modbusToHttpData(regs, 0x0003);
-    const result = {
-      creator: 'modbus-proxy:1.0',
-      type: 'X3-Hybrid G4',
-      sn: 'MODBUS',
-      ver: '3.006.04',
-      Data: data,
-      Information: [0, 0, 0, 0, 0, 0, 0, 0, 'MODBUS'],
-      Values: dataToValues(data, regs),
-    };
+      // Read 0x0003–0x0096 (148 registers), auto-split into chunks
+      modbusPending = modbusReadRegisters(host, port, unitId, fc, 0x0003, 0x009B)
+        .then(regs => {
+          const data = modbusToHttpData(regs, 0x0003);
+          const result = {
+            creator: 'modbus-proxy:1.0',
+            type: 'X3-Hybrid G4',
+            sn: 'MODBUS',
+            ver: '3.006.04',
+            Data: data,
+            Information: [0, 0, 0, 0, 0, 0, 0, 0, 'MODBUS'],
+            Values: dataToValues(data, regs),
+          };
+          const json = JSON.stringify(result);
+          modbusCache = { data: json, time: Date.now() };
+          return json;
+        })
+        .finally(() => { modbusPending = null; });
+    }
+
+    const json = await modbusPending;
 
     res.writeHead(200, {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
     });
-    res.end(JSON.stringify(result));
+    res.end(json);
   } catch (err) {
     res.writeHead(502, { 'Content-Type': 'text/plain' });
     res.end(`Modbus error: ${err.message}`);
