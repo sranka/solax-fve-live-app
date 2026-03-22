@@ -557,6 +557,8 @@
       <div class="status-chip">
         <div class="status-chip-label" id="chipLabelMode"></div>
         <div class="status-chip-value" id="runMode">--</div>
+        <div class="status-chip-label" id="chipLabelSolarToday" style="display:none"></div>
+        <div class="status-chip-value" id="solarToday" style="color:var(--solar);display:none">-- kWh</div>
         <div class="status-chip-label" id="chipLabelYieldToday"></div>
         <div class="status-chip-value" id="yieldToday" style="color:var(--solar)">-- kWh</div>
       </div>
@@ -744,7 +746,8 @@ const i18n = {
     grid: 'Síť',
     consumption: 'Spotřeba',
     mode: 'Režim',
-    yieldToday: 'Výroba dnes',
+    yieldToday: 'Využito dnes',
+    solarToday: 'Výroba dnes',
     total: 'Celkem',
     solarPanels: 'Solární panely',
     power: 'Výkon',
@@ -818,7 +821,8 @@ const i18n = {
     grid: 'Grid',
     consumption: 'Consumption',
     mode: 'Mode',
-    yieldToday: "Today's yield",
+    yieldToday: "Used today",
+    solarToday: "Produced today",
     total: 'Total',
     solarPanels: 'Solar panels',
     power: 'Power',
@@ -915,6 +919,7 @@ function applyLanguage() {
 
   // Status row
   document.getElementById('chipLabelMode').textContent = t('mode');
+  document.getElementById('chipLabelSolarToday').textContent = t('solarToday');
   document.getElementById('chipLabelYieldToday').textContent = t('yieldToday');
   document.getElementById('chipLabelFeedIn').textContent = t('gridTodayFeedIn');
   document.getElementById('chipLabelConsume').textContent = t('gridTodayConsumed');
@@ -1091,7 +1096,7 @@ function r32u(a,b){return a+65536*b}
 function r32s(a,b){return a<32768?a+65536*b:a+65536*b-4294967296}
 function readRunMode(m){return["Waiting","Checking","Normal","Fault","Permanent Fault","Updating","EPS Check","EPS Mode","Self Test","Idle","Standby"][m]||String(m)}
 
-function formatData(d) {
+function formatData(d, values) {
   const r = {
     Yield_Today:d[70]/10, Yield_Total:r32u(d[68],d[69])/10,
     PowerDc1:d[14], PowerDc2:d[15], BAT_Power:r16s(d[41]),
@@ -1110,6 +1115,7 @@ function formatData(d) {
     FreqacA:d[16]/100, FreqacB:d[17]/100, FreqacC:d[18]/100,
     FeedInEnergyToday:r32u(d[90],d[91])/100, ConsumeEnergyToday:r32u(d[92],d[93])/100,
     BatteryOutputToday:d[78]/10,BatteryInputToday:d[79]/10,
+    SolarEnergyToday: values?.SolarEnergyToday, // Some values are only in modbus response, not in Dongle HTTP API
   };
   r.GridPower=r.GridAPower+r.GridBPower+r.GridCPower;
   r.SolarPower=r.PowerDc1+r.PowerDc2;
@@ -1141,6 +1147,7 @@ function formatModbusData(regs, startAddr) {
     FreqacA:g(0x006D)/100, FreqacB:g(0x0071)/100, FreqacC:g(0x0075)/100,
     FeedInEnergyToday:(g(0x0098)+65536*g(0x0099))/100, ConsumeEnergyToday:(g(0x009A)+65536*g(0x009B))/100,
     BatteryOutputToday:g(0x0020)/10, BatteryInputToday:g(0x0023)/10,
+    SolarEnergyToday:g(0x0096)/10,
   };
   r.GridPower=r.GridAPower+r.GridBPower+r.GridCPower;
   r.SolarPower=r.PowerDc1+r.PowerDc2;
@@ -1184,7 +1191,7 @@ async function fetchData(force) {
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const json = await resp.json();
       if (!json.Data||!Array.isArray(json.Data)) throw new Error(t('missingData'));
-      lastData = formatData(json.Data);
+      lastData = formatData(json.Data, json.Values);
     }
     consecutiveErrors = 0;
     rbtn.classList.remove('fetching');
@@ -1257,12 +1264,29 @@ function updateUI(d) {
   } else eC.style.display='none';
 
   const mE=$('runMode');
-  mE.textContent=d.RunMode;
-  mE.className='status-chip-value mode-'+(d.RunMode==='Normal'?'normal':d.RunMode.includes('EPS')?'eps':d.RunMode.includes('Fault')?'fault':'idle');
+  const mL=$('chipLabelMode');
+  if(d.RunMode==='Normal'){
+    mE.style.display='none';
+    mL.style.display='none';
+  } else {
+    mE.style.display='';
+    mL.style.display='';
+    mE.textContent=d.RunMode;
+    mE.className='status-chip-value mode-'+(d.RunMode.includes('EPS')?'eps':d.RunMode.includes('Fault')?'fault':'idle');
+  }
 
-  $('yieldToday').textContent=d.Yield_Today.toFixed(1)+' kWh';
-  $('chipFeedInVal').textContent=d.FeedInEnergyToday.toFixed(1)+' kWh';
-  $('chipConsumeVal').textContent=d.ConsumeEnergyToday.toFixed(1)+' kWh';
+  if(d.SolarEnergyToday!=null){
+    $('chipLabelSolarToday').style.display='';
+    $('solarToday').style.display='';
+    $('solarToday').textContent=d.SolarEnergyToday.toFixed(1)+' kWh';
+  } else {
+    $('chipLabelSolarToday').style.display='none';
+    $('solarToday').style.display='none';
+  }
+  console.log(d.Yield_Today, d.FeedInEnergyToday);
+  $('yieldToday').textContent=(d.Yield_Today-d.FeedInEnergyToday).toFixed(1)+' kWh';
+  $('chipFeedInVal').textContent=d.FeedInEnergyToday.toFixed(2)+' kWh';
+  $('chipConsumeVal').textContent=d.ConsumeEnergyToday.toFixed(2)+' kWh';
   $('chipBatChargedVal').textContent=d.BatteryInputToday.toFixed(1)+' kWh';
   $('chipBatDischargedVal').textContent=d.BatteryOutputToday.toFixed(1)+' kWh';
   $('feedInEnergy').textContent=d.FeedInEnergy.toFixed(1);

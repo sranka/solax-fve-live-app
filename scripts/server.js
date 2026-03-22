@@ -246,7 +246,7 @@ function readRunMode(m) {
     'Updating', 'EPS Check', 'EPS Mode', 'Self Test', 'Idle', 'Standby'][m] || String(m);
 }
 
-function dataToValues(d) {
+function dataToValues(d, regs) {
   const r = {
     Yield_Today: d[70] / 10, Yield_Total: r32u(d[68], d[69]) / 10,
     PowerDc1: d[14], PowerDc2: d[15], BAT_Power: r16s(d[41]),
@@ -265,6 +265,7 @@ function dataToValues(d) {
     FreqacA: d[16] / 100, FreqacB: d[17] / 100, FreqacC: d[18] / 100,
     FeedInEnergyToday:r32u(d[90],d[91])/100, ConsumeEnergyToday:r32u(d[92],d[93])/100,
     BatteryOutputToday:d[78]/10,BatteryInputToday:d[79]/10,
+    SolarEnergyToday:regs[0x0096-0x003]/10,
   };
   r.GridPower = r.GridAPower + r.GridBPower + r.GridCPower;
   r.SolarPower = r.PowerDc1 + r.PowerDc2;
@@ -365,7 +366,7 @@ async function handleModbus(req, res) {
       ver: '3.006.04',
       Data: data,
       Information: [0, 0, 0, 0, 0, 0, 0, 0, 'MODBUS'],
-      Values: dataToValues(data),
+      Values: dataToValues(data, regs),
     };
 
     res.writeHead(200, {
