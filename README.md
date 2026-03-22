@@ -8,10 +8,12 @@ Real-time monitoring app for Solax solar inverters, tested with **Solax X3 Hybri
 - 3-phase grid details (voltage, current, power, frequency)
 - Battery status (SoC, voltage, temperature, charge/discharge)
 - EPS (backup power) monitoring
-- Energy totals (daily yield, feed-in, consumption)
+- Energy totals (daily solar, battery, grid in/out; totals)
 - Multiple inverter support with quick switching
 - Works as a standalone Android/iOS app or a web app in the browser
 - Communicates over Solax modbus TCP or Solax HTTP API
+- Dark and Light mode (dark by default)
+- Double tap to zoom, then zoom out on double tap or automatically after 8 seconds
 
 ## Screenshots
 
@@ -32,7 +34,11 @@ Starts a Node.js HTTP server at [http://localhost:8080](http://localhost:8080) t
 
 The server also acts as an HTTP proxy to Solax Modbus TCP. Set `MODBUS=1` to make Modbus the default for POST requests (the Modbus host is derived from `PROXY_TARGET`). Both `/http` and `/modbus` endpoints are also available for side-by-side comparison.
 
-Assuming that you open the web application in the browser at http://localhost:8080, set the inverter hostname in the app's connection settings to `localhost:8080/http` to communicate using Solax HTTP API, `localhost:8080/modbus` to communicate using Solax modbus TCP, or `localhost:8080` to use a protocol that the server prefers depending on the `MODBUS=1` environment variable.
+When using the web app at http://localhost:8080, set the inverter hostname in the app's connection settings to:
+
+- `localhost:8080/http` — Solax HTTP API
+- `localhost:8080/modbus` — Solax Modbus TCP
+- `localhost:8080` — server default (depends on the `MODBUS=1` environment variable)
 
 ```bash
 # HTTP proxy by default:
