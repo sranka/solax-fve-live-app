@@ -1017,7 +1017,7 @@ let currentTheme = (function() {
     const saved = localStorage.getItem(THEME_KEY);
     if (saved && ['auto','light','dark'].includes(saved)) return saved;
   } catch(e) {}
-  return 'auto';
+  return 'dark';
 })();
 
 function applyTheme(mode) {
