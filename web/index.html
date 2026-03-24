@@ -1183,10 +1183,12 @@ async function fetchData(force) {
     } else {
       const hdrs = {'Content-Type':'application/x-www-form-urlencoded'};
       if (cfg.forwardedFor) hdrs['X-Forwarded-For'] = cfg.forwardedFor;
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 8000);
       const resp = await fetch(`${cfg.protocol}://${cfg.host}`, {
         method:'POST', headers:hdrs,
         body:`optType=ReadRealTimeData&pwd=${cfg.password}`,
-        signal: AbortSignal.timeout(8000),
+        signal: controller.signal,
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const json = await resp.json();
