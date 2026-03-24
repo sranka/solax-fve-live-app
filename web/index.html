@@ -1496,7 +1496,6 @@ document.getElementById('saveConn').addEventListener('click',async()=>{
   let name=document.getElementById('cfgName').value.trim()||host;
 
   if(!host){showToast(t('enterIP'));return;}
-  if(protocol!=='modbus'&&!password){showToast(t('enterPassword'));return;}
 
   const manualRefresh=document.getElementById('cfgManualRefresh').checked;
   const entry={host,password,protocol,interval,name,manualRefresh};
