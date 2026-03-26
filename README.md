@@ -21,15 +21,15 @@ Live monitoring app for Solax X3 Hybrid G4 inverters. Android Phone or TV connec
 
 ### Install on Android phone / TV
 
-The easiest way to install the APK package on your phone without a USB cable is via [LocalSend](https://localsend.org/):
+The easiest way to install the APK package on your phone/TV without a USB cable is via [LocalSend](https://localsend.org/):
 
-1. Install LocalSend on both your computer and phone
+1. Install LocalSend on both your computer and phone/TV
 2. Make sure both devices are on the same WiFi network
 3. Open LocalSend on both devices
-4. [Download the latest APK](https://github.com/sranka/solax-fve-live-app/releases)
-5. From your computer, send the APK file
+4. Download the latest APK file from [releases](https://github.com/sranka/solax-fve-live-app/releases)
+5. From your computer, send the APK file to phone/TV
 6. Accept the file on your phone/TV and open it to install
-7. You may need to allow installation from unknown sources in your phone's settings
+7. You may need to allow installation from unknown sources in settings
 8. Open the application and connect to your Solax inverter. You need to know the IP address of your Solax dongle.
 
 ### Install as PWA (Progressive Web App)
