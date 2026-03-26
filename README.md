@@ -41,7 +41,7 @@ The web application can be installed as a PWA on any device — phone, tablet, o
 1. Open the web app in your browser
    - Running the app from an **HTTPS** URL, such as https://solax-fve-live-app.sranka.fun, will disallow connections to inverters over HTTP, because browsers block mixed content (HTTPS→HTTP)
    - Running the app from an **HTTP** URL, such as http://localhost:8080, allows both HTTP and HTTPS connections — follow the instructions in the [Web Application Server](#web-application-server) section below to set this up
-2. **Chrome / Edge:** Open the **Settings** menu (⚙ icon), tap the **📲 install icon** in the Settings header, and follow the browser prompt
+2. **Chrome / Edge:** Click the install icon in the address bar (or use the browser menu → "Install app") and follow the prompt
 3. **Safari (macOS):** Choose **File → Add to Dock**
 
 For more details on how PWA installation works, see [web.dev — Install your PWA](https://web.dev/learn/pwa/installation).
