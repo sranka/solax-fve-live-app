@@ -1,0 +1,1 @@
+- Hide advanced menu for modbus connections (applies only to HTTP/HTTPS)
