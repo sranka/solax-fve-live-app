@@ -783,7 +783,7 @@
       </div>
       <div class="form-group">
         <label id="labelInterval"></label>
-        <input type="number" id="cfgInterval" value="10" min="3" max="300" inputmode="numeric">
+        <input type="text" id="cfgInterval" value="10" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
       </div>
       <div class="form-group form-check">
         <label><span id="labelManualRefresh"></span> <input type="checkbox" id="cfgManualRefresh"></label>
@@ -1675,7 +1675,7 @@ document.getElementById('saveConn').addEventListener('click',async()=>{
   const host=document.getElementById('cfgHost').value.trim();
   const password=document.getElementById('cfgPassword').value.trim();
   const protocol=document.getElementById('cfgProtocol').value;
-  const interval=parseInt(document.getElementById('cfgInterval').value)||10;
+  const interval=Math.max(3,Math.min(300,parseInt(document.getElementById('cfgInterval').value)||10));
   let name=document.getElementById('cfgName').value.trim()||host;
 
   if(!host){showToast(t('enterIP'));return;}
