@@ -406,6 +406,23 @@
   }
   .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
   .form-hint { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+  .form-group textarea {
+    width: 100%; padding: 12px 14px; background: var(--card);
+    border: 1px solid var(--card-border); border-radius: 10px;
+    color: var(--text); font-family: 'JetBrains Mono', monospace;
+    font-size: 14px; outline: none; transition: border-color 0.2s;
+    resize: vertical; line-height: 1.5;
+  }
+  .form-group textarea:focus { border-color: var(--accent); }
+  .advanced-toggle {
+    font-size: 13px; color: var(--text-dim); cursor: pointer;
+    padding: 8px 0; user-select: none;
+  }
+  .advanced-toggle:hover { color: var(--text); }
+  .advanced-chevron {
+    display: inline-block; font-size: 10px; transition: transform 0.2s;
+  }
+  .advanced-chevron.open { transform: rotate(90deg); }
 
   .btn {
     width: 100%; padding: 14px; border: none; border-radius: 12px;
@@ -761,6 +778,16 @@
       <div class="form-group form-check">
         <label><span id="labelManualRefresh"></span> <input type="checkbox" id="cfgManualRefresh"></label>
       </div>
+      <div class="advanced-toggle" id="advancedToggle">
+        <span class="advanced-chevron" id="advancedChevron">▶</span> <span id="labelAdvanced"></span>
+      </div>
+      <div class="advanced-section" id="advancedSection" style="display:none">
+        <div class="form-group">
+          <label id="labelHeaders"></label>
+          <textarea id="cfgHeaders" rows="3" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="CF-Access-Client-Id: abc123&#10;CF-Access-Client-Secret: xyz789"></textarea>
+          <div class="form-hint" id="hintHeaders"></div>
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" id="cancelEdit"></button>
@@ -854,6 +881,10 @@ const i18n = {
     deleteConfirm: 'Smazat „{name}"?',
     lastUpdate: 'Poslední aktualizace: --',
     manualRefresh: 'Obnovovat ručně',
+    advanced: 'Pokročilé',
+    httpHeaders: 'HTTP hlavičky',
+    httpHeadersHint: 'Jedna hlavička na řádek ve formátu Název: Hodnota',
+    httpHeadersError: 'Neplatný formát hlavičky na řádku {line}: očekáváno „Název: Hodnota"',
     language: 'Jazyk',
     gridExport: '▶ export',
     gridImport: '◀ import',
@@ -927,6 +958,10 @@ const i18n = {
     deleteConfirm: 'Delete "{name}"?',
     lastUpdate: 'Last update: --',
     manualRefresh: 'Refresh manually',
+    advanced: 'Advanced',
+    httpHeaders: 'HTTP Headers',
+    httpHeadersHint: 'One header per line in format Name: Value',
+    httpHeadersError: 'Invalid header format on line {line}: expected "Name: Value"',
     language: 'Language',
     gridExport: '▶ export',
     gridImport: '◀ import',
@@ -1027,6 +1062,9 @@ function applyLanguage() {
   document.getElementById('labelProtocol').textContent = t('protocol');
   document.getElementById('labelInterval').textContent = t('interval');
   document.getElementById('labelManualRefresh').textContent = t('manualRefresh');
+  document.getElementById('labelAdvanced').textContent = t('advanced');
+  document.getElementById('labelHeaders').textContent = t('httpHeaders');
+  document.getElementById('hintHeaders').textContent = t('httpHeadersHint');
   document.getElementById('saveConn').textContent = t('save');
   document.getElementById('cancelEdit').textContent = t('cancel');
 
@@ -1231,7 +1269,7 @@ async function fetchData(force) {
     if (cfg.protocol === 'modbus') {
       lastData = await fetchModbusData(cfg);
     } else {
-      const hdrs = {'Content-Type':'application/x-www-form-urlencoded'};
+      const hdrs = {'Content-Type':'application/x-www-form-urlencoded',...(cfg.headers||{})};
       const controller = new AbortController();
       setTimeout(() => controller.abort(), 8000);
       const resp = await fetch(`${cfg.protocol}://${cfg.host}`, {
@@ -1530,13 +1568,19 @@ function openEditModal(id){
   if(!editingId){
     $('cfgName').value='';$('cfgHost').value='';$('cfgPassword').value='';
     $('cfgProtocol').value=$('cfgProtocol').options[0].value;$('cfgInterval').value='10';
-    $('cfgManualRefresh').checked=false;
+    $('cfgManualRefresh').checked=false;$('cfgHeaders').value='';
+    $('advancedSection').style.display='none';
+    $('advancedChevron').classList.remove('open');
   } else {
     const c=connections.find(x=>x.id===id);
     if(!c)return;
     $('cfgName').value=c.name||'';$('cfgHost').value=c.host||'';$('cfgPassword').value=c.password||'';
     $('cfgProtocol').value=c.protocol||'http';$('cfgInterval').value=c.interval||10;
     $('cfgManualRefresh').checked=!!c.manualRefresh;
+    const hdrText=c.headers?Object.entries(c.headers).map(([k,v])=>k+': '+v).join('\n'):'';
+    $('cfgHeaders').value=hdrText;
+    if(hdrText){$('advancedSection').style.display='';$('advancedChevron').classList.add('open');}
+    else{$('advancedSection').style.display='none';$('advancedChevron').classList.remove('open');}
   }
   updateProtocolUI();
   $('editModal').classList.add('open');
@@ -1547,6 +1591,13 @@ document.getElementById('addNewConn').addEventListener('click',()=>openEditModal
 document.getElementById('cancelEdit').addEventListener('click',closeEditModal);
 document.getElementById('editModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeEditModal()});
 document.getElementById('cfgProtocol').addEventListener('change',updateProtocolUI);
+document.getElementById('advancedToggle').addEventListener('click',()=>{
+  const sec=document.getElementById('advancedSection');
+  const chev=document.getElementById('advancedChevron');
+  const open=sec.style.display==='none';
+  sec.style.display=open?'':'none';
+  chev.classList.toggle('open',open);
+});
 
 // Add Modbus TCP option when running as native app
 if(typeof Capacitor!=='undefined'&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()){
@@ -1564,8 +1615,22 @@ document.getElementById('saveConn').addEventListener('click',async()=>{
 
   if(!host){showToast(t('enterIP'));return;}
 
+  // Parse extra headers
+  const headersRaw=document.getElementById('cfgHeaders').value;
+  const headersLines=headersRaw.split('\n').filter(l=>l.trim());
+  const headers={};
+  for(let i=0;i<headersLines.length;i++){
+    const colIdx=headersLines[i].indexOf(':');
+    if(colIdx<1){showToast(t('httpHeadersError').replace('{line}',i+1));return;}
+    const hName=headersLines[i].substring(0,colIdx).trim();
+    const hVal=headersLines[i].substring(colIdx+1).trim();
+    if(!hName||!hVal){showToast(t('httpHeadersError').replace('{line}',i+1));return;}
+    headers[hName]=hVal;
+  }
+
   const manualRefresh=document.getElementById('cfgManualRefresh').checked;
   const entry={host,password,protocol,interval,name,manualRefresh};
+  if(Object.keys(headers).length>0) entry.headers=headers;
 
   if(editingId){
     const idx=connections.findIndex(c=>c.id===editingId);
