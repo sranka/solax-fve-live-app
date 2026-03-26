@@ -410,7 +410,7 @@ async function handleModbus(req, res) {
   }
 }
 
-async function handleModbusRead(req, res, addrHex) {
+async function handleModbusRead(req, res, addrHex, params) {
   const target = getModbusHostPort();
   if (!target) {
     res.writeHead(502, { 'Content-Type': 'text/plain' });
@@ -425,20 +425,33 @@ async function handleModbusRead(req, res, addrHex) {
     return;
   }
 
+  const fc = parseInt(params.get('fc') || '0x04', 16) || 0x04;
+  const length = Math.max(1, Math.min(125, parseInt(params.get('length') || '1', 10) || 1));
+
+  console.log(`Modbus read request: address=0x${startAddr.toString(16).padStart(4, '0')}, fc=0x${fc.toString(16).padStart(2, '0')}, length=${length}`);
+
   try {
     const { host, port } = target;
-    const regs = await modbusReadRegisters(host, port, 1, 0x04, startAddr, startAddr + 1);
+    const regs = await modbusReadRegisters(host, port, 1, fc, startAddr, startAddr + length - 1);
 
-    const [a, b] = regs;
+    const chars = regs.map(r => String.fromCharCode((r >> 8) & 0xFF, r & 0xFF)).join('');
+
     const result = {
       address: '0x' + startAddr.toString(16).padStart(4, '0'),
-      data: [a, b],
-      r16s: [r16s(a), r16s(b)],
-      r32u: a + 65536 * b,
-      r32s: r32s(a, b),
-      'r32u-reversed': b + 65536 * a,
-      'r32s-reversed': r32s(b, a),
+      fc: '0x' + fc.toString(16).padStart(2, '0'),
+      length: regs.length,
+      data: regs,
+      chars: chars,
     };
+
+    if (regs.length <= 2) {
+      const [a, b = 0] = regs;
+      result.r16s = regs.map(v => r16s(v));
+      result.r32u = a + 65536 * b;
+      result.r32s = r32s(a, b);
+      result['r32u-reversed'] = b + 65536 * a;
+      result['r32s-reversed'] = r32s(b, a);
+    }
 
     res.writeHead(200, {
       'Content-Type': 'application/json',
@@ -478,7 +491,7 @@ function corsPreflightHeaders(req) {
 // --- Server ---
 
 const server = http.createServer((req, res) => {
-  const url = req.url.split('?')[0];
+  const [url, queryStr = ''] = req.url.split('?');
 
   if (req.method === 'OPTIONS') {
     const preflight = corsPreflightHeaders(req);
@@ -502,9 +515,9 @@ const server = http.createServer((req, res) => {
       handleHttpProxy(req, res);
     }
   } else {
-    const modbusReadMatch = url.match(/^\/modbus\/([0-9a-fA-F]+)$/);
+    const modbusReadMatch = url.match(/^\/modbus\/([0-9a-fA-F]+)/);
     if (modbusReadMatch) {
-      handleModbusRead(req, res, modbusReadMatch[1]);
+      handleModbusRead(req, res, modbusReadMatch[1], new URLSearchParams(queryStr));
     } else if (url === '/modbus') {
       handleModbus(req, res);
     } else {
