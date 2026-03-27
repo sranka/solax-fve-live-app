@@ -141,33 +141,54 @@ Verify the tunnel is working by visiting `https://solax.example.com` in your bro
 
 ## 5. Protect POST Endpoints
 
-The POST endpoints (`/`, `/http` and `/modbus`) send commands to the inverter. You should restrict access to all POST endpoints to trusted IP addresses using Cloudflare WAF custom rules.
+The POST endpoints (`/`, `/http` and `/modbus`) send commands to the inverter. You should restrict access to all POST endpoints to trusted clients, for example using Cloudflare WAF custom rules.
 
 > Full documentation: https://developers.cloudflare.com/waf/custom-rules/
 
-### Create a WAF rule to block unauthorized POST requests
+### Create a WAF rule to allow requests only from specific source IP addresses
 
 1. Log in to the [Cloudflare dashboard](https://dash.cloudflare.com)
 2. Select your domain
 3. Go to **Security** → **WAF** → **Custom rules**
 4. Click **Create rule**
 5. Configure the rule:
-   - **Rule name:** `Block POST to Solax FVE`
+   - **Rule name:** `Allow only specific source IP Addresses`
    - **Expression:** use the expression builder or edit the expression directly:
      ```
-     (http.request.method eq "POST") and (not ip.src in {<YOUR_HOME_IP>})
+     (not ip.src in {<YOUR_HOME_IP>})
      ```
-     Replace `<YOUR_HOME_IP>` with your public IP address (find it at https://whatismyipaddress.com). You can add multiple IPs: `{1.2.3.4 5.6.7.8}`.
+     Replace `<YOUR_HOME_IP>` with your public IP address (find it at https://whatismyipaddress.com). You can add multiple IPs: `{1.2.3.4 5.6.7.8}`, or formulate the expression in a way to use a managed list of IP addresses.
    - **Action:** `Block`
 6. Click **Deploy**
 
-This rule blocks all POST requests to your Solax domain unless they originate from your allowed IP addresses. GET requests (the monitoring dashboard) remain accessible from anywhere.
+This rule blocks all requests unless they originate from your allowed IP addresses.
 
-### Dynamic IP considerations
+### Create a WAF rule to block unauthorized POST requests with dynamic IP addresses
 
-If your home IP changes frequently, consider:
-- Enhance the IP filtering rule to bypass when a secret is present in the URL fragment. A WAF blocking rule such as `(not ip.src in $allowed_ip_addresses and ends_with(http.request.full_uri, "#MY_TOP_SECRET"))`, together with a connection setting in the application that appends `#MY_TOP_SECRET` to the hostname, does the trick.
-- Setting up a script that updates the WAF rule when your IP changes via the [Cloudflare API](https://developers.cloudflare.com/api/)
+If your client IP address changes frequently — for example when using phone/tablet and switching networks as you travel — or to have enhanced security, you can restrict access to the POST API to contain a specific HTTP header that can be configured in the application connection settings (Advanced toggle):
+
+1. Log in to the [Cloudflare dashboard](https://dash.cloudflare.com)
+2. Select your domain
+3. Go to **Security** → **WAF** → **Custom rules**
+4. Click **Create rule**
+5. Configure the rule:
+   - **Rule name:** `Allow solax app API calls with extra header`
+   - **Expression:** use the expression builder or edit the expression directly:
+     ```
+     ( 
+        (http.host eq "<YOUR_HOST_NAME>") 
+        and ( 
+         (http.request.method eq "OPTIONS") 
+         or (http.request.headers["<YOUR_HEADER_NAME>"][0] eq "<YOUR_HEADER_VALUE>")
+        )
+     )
+     ```
+     Replace `<YOUR_HOST_NAME>` with the cloudflare hostname assigned to the tunnel, `<YOUR_HEADER_NAME>` and `<YOUR_HEADER_VALUE>` with your HTTP header name (lower-cased) and value (case-sensitive) to be configured in the solax application.
+   - **Action:** `Skip`
+   - **WAF components to skip:** `All remaining custom rules`
+   - **Place at:** before rules that would otherwise block, such as 'Allow only specific source IP Addresses'
+
+6. Click **Deploy**
 
 ## 6. Maintenance
 

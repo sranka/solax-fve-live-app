@@ -1,6 +1,6 @@
 # Solax FVE Live Monitor
 
-Live monitoring app for Solax X3 Hybrid G4 inverters. The Android app connects directly to the inverter on your home network. A web application is also provided for other devices and for remote access over HTTPS.
+Live monitoring app for Solax X3 Hybrid G4 inverters. The Android app connects directly to the inverter on your home network. A web application is also provided for non-Android devices and for remote access over HTTPS to a provided proxy that must be run in your home network.
 
 <a href="docs/tablet-screenshot.png"><img src="docs/tablet-screenshot.png" height="300" alt="Solax FVE Monitor on Tablet"></a> <a href="docs/phone-screenshot.png"><img src="docs/phone-screenshot.png" height="300" alt="Solax FVE Monitor on Phone"></a>
 
@@ -39,7 +39,7 @@ The web application can be installed as a PWA on any device — phone, tablet, o
 **Note:** Unlike the native Android app, a PWA runs inside the browser and cannot connect directly to the inverter on your local network due to browser security restrictions (CORS, mixed content). You need to use the web application's proxy server (see [Web Application Server](#web-application-server) below) or an HTTPS proxy to access your inverter.
 
 1. Open the web app in your browser
-   - Running the app from an **HTTPS** URL, such as https://solax-fve-live-app.sranka.fun, will disallow connections to inverters over HTTP, because browsers block mixed content (HTTPS→HTTP)
+   - Running the app from an **HTTPS** URL, such as https://solax.sranka.fun, will disallow connections to inverters over HTTP, because browsers block mixed content (HTTPS→HTTP)
    - Running the app from an **HTTP** URL, such as http://localhost:8080, allows both HTTP and HTTPS connections — follow the instructions in the [Web Application Server](#web-application-server) section below to set this up
 2. **Chrome / Edge:** Click the install icon in the address bar (or use the browser menu → "Install app") and follow the prompt
 3. **Safari (macOS):** Choose **File → Add to Dock**
