@@ -825,6 +825,7 @@
       <div id="scanResults" class="conn-list"></div>
     </div>
     <div class="modal-footer">
+      <button class="btn btn-secondary" id="scanRetry" disabled></button>
       <button class="btn btn-secondary" id="scanStop"></button>
     </div>
   </div>
@@ -931,6 +932,7 @@ const i18n = {
     scanProgress: 'Skenování… {scanned}/{total}',
     scanDone: 'Skenování dokončeno',
     scanNoDevices: 'Žádná zařízení nenalezena',
+    scanRetry: 'Znovu',
     scanStop: 'Zastavit',
     scanClose: 'Zavřít',
     scanNotOnWifi: 'Nejste připojeni k WiFi',
@@ -1016,6 +1018,7 @@ const i18n = {
     scanProgress: 'Scanning… {scanned}/{total}',
     scanDone: 'Scan complete',
     scanNoDevices: 'No devices found',
+    scanRetry: 'Retry',
     scanStop: 'Stop',
     scanClose: 'Close',
     scanNotOnWifi: 'Not connected to WiFi',
@@ -1120,6 +1123,7 @@ function applyLanguage() {
 
   // Scan modal
   document.getElementById('scanTitle').textContent = t('scanTitle');
+  document.getElementById('scanRetry').textContent = t('scanRetry');
   document.getElementById('scanStop').textContent = t('scanStop');
   document.getElementById('scanNetworkBtn').textContent = t('scanNetwork');
 
@@ -1731,6 +1735,7 @@ function closeScanModal(){
   releaseFocus();
 }
 document.getElementById('scanStop').addEventListener('click',closeScanModal);
+document.getElementById('scanRetry').addEventListener('click',()=>startNetworkScan());
 document.getElementById('scanModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeScanModal()});
 
 async function startNetworkScan(){
@@ -1739,9 +1744,11 @@ async function startNetworkScan(){
   const resultsEl=document.getElementById('scanResults');
   const progressEl=document.getElementById('scanProgress');
   const stopBtn=document.getElementById('scanStop');
+  const retryBtn=document.getElementById('scanRetry');
   resultsEl.innerHTML='';
   progressEl.textContent=t('scanProgress').replace('{scanned}','0').replace('{total}','…');
   stopBtn.textContent=t('scanStop');
+  retryBtn.disabled=true;
   document.getElementById('scanTitle').textContent=t('scanTitle');
 
   const modal=document.getElementById('scanModal');
@@ -1754,6 +1761,7 @@ async function startNetworkScan(){
   }catch(e){
     progressEl.textContent=t('scanNotOnWifi');
     stopBtn.textContent=t('scanClose');
+    retryBtn.disabled=false;
     return;
   }
 
@@ -1797,6 +1805,7 @@ async function startNetworkScan(){
   launch();
   await allDone;
 
+  retryBtn.disabled=false;
   if(!_scanAborted){
     progressEl.textContent=t('scanDone')+(found===0?' — '+t('scanNoDevices'):'');
     stopBtn.textContent=t('scanClose');
