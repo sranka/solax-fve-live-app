@@ -1760,35 +1760,42 @@ async function startNetworkScan(){
   const total=subnet.count;
   let scanned=0;
   let found=0;
-  const batchSize=32;
+  const maxConcurrent=32;
+  let remaining=total;
+  let resolve;
+  const allDone=new Promise(r=>{resolve=r});
+  let running=0;
+  let nextIdx=1;
 
-  for(let start=1;start<=total&&!_scanAborted;start+=batchSize){
-    const end=Math.min(start+batchSize-1,total);
-    const promises=[];
-    for(let i=start;i<=end;i++){
-      const host=subnet.prefix+i;
-      promises.push(
-        Capacitor.Plugins.NetworkScanner.scanHost({host}).then(r=>{
-          scanned++;
-          if(r.found&&!_scanAborted){
-            found++;
-            const label=r.serial||r.host;
-            const detail=[r.factory,r.module].filter(Boolean).join(' ');
-            const el=document.createElement('div');
-            el.className='conn-item';
-            el.innerHTML='<div class="conn-item-info" tabindex="0" role="button"><div class="conn-item-name">'+esc(label)+'</div><div class="conn-item-host">'+esc(r.host)+(detail?' — '+esc(detail):'')+'</div></div>';
-            el.querySelector('.conn-item-info').addEventListener('click',()=>{
-              addScannedConnection(r.host,label);
-              closeScanModal();
-            });
-            resultsEl.appendChild(el);
-          }
-          progressEl.textContent=t('scanProgress').replace('{scanned}',scanned).replace('{total}',total);
-        }).catch(()=>{ scanned++; })
-      );
+  function launch(){
+    while(running<maxConcurrent&&nextIdx<=total&&!_scanAborted){
+      const host=subnet.prefix+(nextIdx++);
+      running++;
+      Capacitor.Plugins.NetworkScanner.scanHost({host}).then(r=>{
+        scanned++;
+        if(r.found&&!_scanAborted){
+          found++;
+          const label=r.serial||r.host;
+          const detail=[r.factory,r.module].filter(Boolean).join(' ');
+          const el=document.createElement('div');
+          el.className='conn-item';
+          el.innerHTML='<div class="conn-item-info" tabindex="0" role="button"><div class="conn-item-name">'+esc(label)+'</div><div class="conn-item-host">'+esc(r.host)+(detail?' — '+esc(detail):'')+'</div></div>';
+          el.querySelector('.conn-item-info').addEventListener('click',()=>{
+            addScannedConnection(r.host,label);
+            closeScanModal();
+          });
+          resultsEl.appendChild(el);
+        }
+        progressEl.textContent=t('scanProgress').replace('{scanned}',scanned).replace('{total}',total);
+      }).catch(()=>{ scanned++; }).finally(()=>{
+        running--;
+        if(--remaining===0) resolve();
+        else launch();
+      });
     }
-    await Promise.all(promises);
   }
+  launch();
+  await allDone;
 
   if(!_scanAborted){
     progressEl.textContent=t('scanDone')+(found===0?' — '+t('scanNoDevices'):'');
