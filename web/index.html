@@ -1368,7 +1368,7 @@ function updateUI(d) {
   bE.textContent=Math.abs(d.BAT_Power);
   bE.className='flow-node-value '+(d.BAT_Power<0?'discharging':d.BAT_Power>0?'charging':'');
   bE.parentElement.querySelector('.flow-node-unit').textContent='W '+(d.BAT_Power<0?t('battDischarging'):d.BAT_Power>0?t('battCharging'):'idle');
-  const batterySOC=d.BatteryCapacity+'%'+(d.BatteryRemainingEnergy>0?' / '+d.BatteryRemainingEnergy.toFixed(1)+' kWh':'');
+  const batterySOC=d.BatteryCapacity+'%'+(d.BatteryRemainingEnergy>0?(d.BatteryCapacity>99?' ':' / ')+d.BatteryRemainingEnergy.toFixed(1)+' kWh':'');
   $('batterySOC').textContent=batterySOC;
   $('battSOCDetail').textContent=batterySOC;
   $('battPowerDetail').textContent=d.BAT_Power+' W';
