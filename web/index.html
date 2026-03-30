@@ -1873,13 +1873,12 @@ document.getElementById('scanNetworkBtn').addEventListener('click',startNetworkS
 //  Settings Transfer (Phone <-> TV)
 // ═══════════════════════════════════════════
 
-// Minimal QR Code generator (alphanumeric mode, version 1-4)
+// Minimal QR Code generator (alphanumeric + byte mode, version 1-5)
 var _qr=(function(){
   var EC=[1,0,3,2];
-  // Generator polynomials for EC codewords (medium level)
-  // QR version capacity (alphanumeric, M level): v1=20, v2=38, v3=61, v4=86
-  var CAPS=[0,20,38,61,86];
-  var SIZES=[0,21,25,29,33];
+  // QR version capacity (alphanumeric, M level): v1=20, v2=38, v3=61, v4=86, v5=109
+  var CAPS=[0,20,38,61,86,109];
+  var SIZES=[0,21,25,29,33,37];
   var ALPHAMAP='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:';
 
   // GF(256) math
@@ -1910,33 +1909,28 @@ var _qr=(function(){
     return msg.slice(data.length);
   }
 
-  function encodeAlphanumeric(str){
+  function encodeByte(str){
     var bits=[];
     function push(val,len){for(var i=len-1;i>=0;i--)bits.push((val>>i)&1);}
-    push(2,4); // mode: alphanumeric
-    push(str.length,9); // char count (v1-9)
-    for(var i=0;i<str.length-1;i+=2){
-      push(ALPHAMAP.indexOf(str[i])*45+ALPHAMAP.indexOf(str[i+1]),11);
-    }
-    if(str.length%2)push(ALPHAMAP.indexOf(str[str.length-1]),6);
+    push(4,4); // mode: byte
+    push(str.length,8); // byte count (v1-9)
+    for(var i=0;i<str.length;i++)push(str.charCodeAt(i),8);
     return bits;
   }
 
-  // Data codewords and EC codewords per version (M level)
-  var DATA_CW=[0,16,28,44,64];
-  var EC_CW=[0,10,16,26,28]; // EC codewords per block (M level, single block for v1-4)
+  // Data codewords, EC codewords per block, and block count per version (M level)
+  var DATA_CW =[0,16,28,44,64,86];
+  var EC_CW   =[0,10,16,26,28,24];
+  var NBLOCKS =[0, 1, 1, 1, 1, 2];
+  // Byte mode capacity (M level): v1=14, v2=26, v3=42, v4=62, v5=84
+  var BYTE_CAPS=[0,14,26,42,62,84];
 
   function encode(text){
-    text=text.toUpperCase();
-    // Validate alphanumeric
-    for(var i=0;i<text.length;i++)if(ALPHAMAP.indexOf(text[i])<0)return null;
+    var bits,ver=0;
 
-    // Find smallest version
-    var ver=0;
-    for(var v=1;v<=4;v++){if(text.length<=CAPS[v]){ver=v;break;}}
+    for(var v=1;v<=5;v++){if(text.length<=BYTE_CAPS[v]){ver=v;break;}}
     if(!ver)return null;
-
-    var bits=encodeAlphanumeric(text);
+    bits=encodeByte(text);
     var totalBits=DATA_CW[ver]*8;
 
     // Terminator
@@ -1959,7 +1953,23 @@ var _qr=(function(){
       data[i]=b;
     }
 
-    var ec=ecEncode(data,EC_CW[ver]);
+    // EC encode with block interleaving
+    var nBlocks=NBLOCKS[ver];
+    var ecPerBlock=EC_CW[ver];
+    var blockSize=Math.floor(data.length/nBlocks);
+    var dataBlocks=[],ecBlocks=[];
+    for(var b=0;b<nBlocks;b++){
+      var start=b*blockSize;
+      var len=(b<nBlocks-1)?blockSize:data.length-start;
+      var block=data.slice(start,start+len);
+      dataBlocks.push(block);
+      ecBlocks.push(ecEncode(block,ecPerBlock));
+    }
+    // Interleave data codewords, then EC codewords
+    var interleaved=[];
+    var maxDLen=dataBlocks[nBlocks-1].length;
+    for(var i=0;i<maxDLen;i++)for(var b=0;b<nBlocks;b++)if(i<dataBlocks[b].length)interleaved.push(dataBlocks[b][i]);
+    for(var i=0;i<ecPerBlock;i++)for(var b=0;b<nBlocks;b++)interleaved.push(ecBlocks[b][i]);
 
     // Build module grid
     var size=SIZES[ver];
@@ -1984,10 +1994,9 @@ var _qr=(function(){
     finderPattern(size-7,0);
 
     // Alignment pattern (versions 2+)
-    var ALIGN_POS=[0,0,18,22,26]; // center position per version
+    var ALIGN_POS=[0,0,18,22,26,30]; // center position per version
     if(ver>=2){
       var ac=ALIGN_POS[ver];
-      // Only place if not overlapping finder patterns
       if(!reserved[ac][ac]){
         for(var r=-2;r<=2;r++)for(var c=-2;c<=2;c++){
           var val=(r===-2||r===2||c===-2||c===2||(r===0&&c===0));
@@ -2017,9 +2026,7 @@ var _qr=(function(){
 
     // Place data bits
     var allBits=[];
-    var allBytes=new Uint8Array(data.length+ec.length);
-    allBytes.set(data);allBytes.set(ec,data.length);
-    for(var i=0;i<allBytes.length;i++)for(var j=7;j>=0;j--)allBits.push((allBytes[i]>>j)&1);
+    for(var i=0;i<interleaved.length;i++)for(var j=7;j>=0;j--)allBits.push((interleaved[i]>>j)&1);
 
     var bitIdx=0;
     for(var col=size-1;col>=1;col-=2){
@@ -2105,7 +2112,7 @@ async function openTransferReceive(){
 
   var token=Math.random().toString(36).slice(2,10).toUpperCase();
   var port=8765;
-  var url='SRANKASOLAX://SEND/'+ip+'/'+port+'/'+token;
+  var url='https://solax.sranka.fun/send/'+ip+'/'+port+'/'+token;
 
   _qr.render(document.getElementById('qrCanvas'),url,5);
 
