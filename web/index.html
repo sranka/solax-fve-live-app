@@ -732,6 +732,7 @@
     <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between">
       <h2 id="settingsTitle" style="margin:0"></h2>
       <div style="display:flex;gap:6px;align-items:center">
+        <button class="header-btn" id="receiveSettingsBtn" style="display:none" aria-label="Receive settings"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm-2 8h8v8H3v-8zm2 2v4h4v-4H5zM13 3h8v8h-8V3zm2 2v4h4V5h-4zm4 8h2v2h-2v-2zm-6 0h2v4h4v-2h-2v-2h2v2h2v4h-2v2h-4v-2h-2v-2h2v-2h-2v-2z"/></svg></button>
         <a class="header-btn" id="installAppLink" href="https://github.com/sranka/solax-fve-live-app?tab=readme-ov-file#install-on-android-phone--tv" target="_blank" rel="noopener" aria-label="Install" style="text-decoration:none">📲</a>
         <a class="header-btn" href="https://github.com/sranka/solax-fve-live-app" target="_blank" rel="noopener" aria-label="GitHub" style="text-decoration:none"><svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
       </div>
@@ -827,6 +828,21 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" id="scanRetry" disabled></button>
       <button class="btn btn-secondary" id="scanStop"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Transfer Modal -->
+<div class="modal-overlay" id="transferModal">
+  <div class="modal">
+    <div class="modal-header"><h2 id="transferTitle"></h2></div>
+    <div class="modal-body" style="text-align:center">
+      <canvas id="qrCanvas" width="200" height="200" style="margin:0 auto 16px;display:block;image-rendering:pixelated"></canvas>
+      <p id="transferQRLabel" style="color:var(--text-dim);font-size:13px;margin-bottom:12px"></p>
+      <p id="transferStatus" style="font-size:14px;margin-bottom:8px"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="transferClose"></button>
     </div>
   </div>
 </div>
@@ -936,6 +952,17 @@ const i18n = {
     scanStop: 'Zastavit',
     scanClose: 'Zavřít',
     scanNotOnWifi: 'Nejste připojeni k WiFi',
+    receiveSettings: 'Přijmout nastavení',
+    receiveSettingsWaiting: 'Čekání na připojení z telefonu…',
+    receiveSettingsQR: 'Naskenujte tento QR kód telefonem',
+    receiveSettingsTimeout: 'Čas vypršel — žádné připojení',
+    receiveSettingsConfirm: 'Uložit připojení „{name}" ({protocol}://{host})?',
+    receiveSettingsSaved: 'Připojení přijato a uloženo',
+    receiveSettingsError: 'Chyba při příjmu nastavení',
+    sendingSettings: 'Odesílání nastavení na TV…',
+    sendSettingsSuccess: 'Nastavení úspěšně odesláno',
+    sendSettingsError: 'Odeslání nastavení selhalo',
+    sendSettingsNoActive: 'Žádné aktivní připojení k odeslání',
   },
   en: {
     disconnected: 'Not connected',
@@ -1022,6 +1049,17 @@ const i18n = {
     scanStop: 'Stop',
     scanClose: 'Close',
     scanNotOnWifi: 'Not connected to WiFi',
+    receiveSettings: 'Receive settings',
+    receiveSettingsWaiting: 'Waiting for connection from phone…',
+    receiveSettingsQR: 'Scan this QR code with your phone',
+    receiveSettingsTimeout: 'Timeout — no connection received',
+    receiveSettingsConfirm: 'Save connection "{name}" ({protocol}://{host})?',
+    receiveSettingsSaved: 'Connection received and saved',
+    receiveSettingsError: 'Error receiving settings',
+    sendingSettings: 'Sending settings to TV…',
+    sendSettingsSuccess: 'Settings sent successfully',
+    sendSettingsError: 'Failed to send settings',
+    sendSettingsNoActive: 'No active connection to send',
   }
 };
 
@@ -1126,6 +1164,10 @@ function applyLanguage() {
   document.getElementById('scanRetry').textContent = t('scanRetry');
   document.getElementById('scanStop').textContent = t('scanStop');
   document.getElementById('scanNetworkBtn').textContent = t('scanNetwork');
+
+  // Transfer modal
+  document.getElementById('receiveSettingsBtn').title = t('receiveSettings');
+  document.getElementById('transferClose').textContent = t('close');
 
   // Confirm dialog
   document.getElementById('confirmNo').textContent = t('confirmNo');
@@ -1588,6 +1630,7 @@ document.addEventListener('keydown',function(e){
     else if(top.modal.id==='scanModal') closeScanModal();
     else if(top.modal.id==='editModal') closeEditModal();
     else if(top.modal.id==='settingsModal') closeSettingsModal();
+    else if(top.modal.id==='transferModal') closeTransferModal();
     return;
   }
   // Tab trapping inside modal
@@ -1611,7 +1654,7 @@ function openSettingsModal(){
   renderConnList();
   const modal=document.getElementById('settingsModal');
   modal.classList.add('open');
-  trapFocus(modal);
+  trapFocus(modal,document.getElementById('connList').querySelector('[tabindex]')||document.getElementById('addNewConn'));
 }
 function closeSettingsModal(){ document.getElementById('settingsModal').classList.remove('open'); releaseFocus(); }
 
@@ -1722,6 +1765,7 @@ if(typeof Capacitor!=='undefined'&&Capacitor.isNativePlatform&&Capacitor.isNativ
   const opt=document.createElement('option');opt.value='modbus';opt.textContent='Modbus TCP';
   sel.insertBefore(opt,sel.firstChild);
   document.getElementById('scanNetworkBtn').style.display='';
+  document.getElementById('receiveSettingsBtn').style.display='';
   document.getElementById('installAppLink').style.display='none';
 }
 
@@ -1825,6 +1869,330 @@ function addScannedConnection(host, label){
 
 document.getElementById('scanNetworkBtn').addEventListener('click',startNetworkScan);
 
+// ═══════════════════════════════════════════
+//  Settings Transfer (Phone <-> TV)
+// ═══════════════════════════════════════════
+
+// Minimal QR Code generator (alphanumeric + byte mode, version 1-5)
+var _qr=(function(){
+  var EC=[1,0,3,2];
+  // QR version capacity (alphanumeric, M level): v1=20, v2=38, v3=61, v4=86, v5=109
+  var CAPS=[0,20,38,61,86,109];
+  var SIZES=[0,21,25,29,33,37];
+  var ALPHAMAP='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:';
+
+  // GF(256) math
+  var EXP=new Uint8Array(256),LOG=new Uint8Array(256);
+  (function(){var v=1;for(var i=0;i<256;i++){EXP[i]=v;LOG[v]=i;v<<=1;if(v&256)v^=285;}})();
+  function gfMul(a,b){return a&&b?EXP[(LOG[a]+LOG[b])%255]:0;}
+
+  function polyMul(p,q){
+    var r=new Uint8Array(p.length+q.length-1);
+    for(var i=0;i<p.length;i++)for(var j=0;j<q.length;j++)r[i+j]^=gfMul(p[i],q[j]);
+    return r;
+  }
+
+  function genPoly(n){
+    var p=new Uint8Array([1]);
+    for(var i=0;i<n;i++)p=polyMul(p,new Uint8Array([1,EXP[i]]));
+    return p;
+  }
+
+  function ecEncode(data,ecCount){
+    var gen=genPoly(ecCount);
+    var msg=new Uint8Array(data.length+ecCount);
+    msg.set(data);
+    for(var i=0;i<data.length;i++){
+      var coef=msg[i];
+      if(coef)for(var j=0;j<gen.length;j++)msg[i+j]^=gfMul(gen[j],coef);
+    }
+    return msg.slice(data.length);
+  }
+
+  function encodeByte(str){
+    var bits=[];
+    function push(val,len){for(var i=len-1;i>=0;i--)bits.push((val>>i)&1);}
+    push(4,4); // mode: byte
+    push(str.length,8); // byte count (v1-9)
+    for(var i=0;i<str.length;i++)push(str.charCodeAt(i),8);
+    return bits;
+  }
+
+  // Data codewords, EC codewords per block, and block count per version (M level)
+  var DATA_CW =[0,16,28,44,64,86];
+  var EC_CW   =[0,10,16,26,18,24];
+  var NBLOCKS =[0, 1, 1, 1, 2, 2];
+  // Byte mode capacity (M level): v1=14, v2=26, v3=42, v4=62, v5=84
+  var BYTE_CAPS=[0,14,26,42,62,84];
+
+  function encode(text){
+    var bits,ver=0;
+
+    for(var v=1;v<=5;v++){if(text.length<=BYTE_CAPS[v]){ver=v;break;}}
+    if(!ver)return null;
+    bits=encodeByte(text);
+    var totalBits=DATA_CW[ver]*8;
+
+    // Terminator
+    var termLen=Math.min(4,totalBits-bits.length);
+    for(var i=0;i<termLen;i++)bits.push(0);
+    // Pad to byte
+    while(bits.length%8)bits.push(0);
+    // Pad codewords
+    var pads=[236,17];
+    var pi=0;
+    while(bits.length<totalBits){
+      for(var i=0;i<8;i++)bits.push((pads[pi]>>(7-i))&1);
+      pi^=1;
+    }
+
+    // Convert to bytes
+    var data=new Uint8Array(DATA_CW[ver]);
+    for(var i=0;i<data.length;i++){
+      var b=0;for(var j=0;j<8;j++)b=(b<<1)|bits[i*8+j];
+      data[i]=b;
+    }
+
+    // EC encode with block interleaving
+    var nBlocks=NBLOCKS[ver];
+    var ecPerBlock=EC_CW[ver];
+    var blockSize=Math.floor(data.length/nBlocks);
+    var dataBlocks=[],ecBlocks=[];
+    for(var b=0;b<nBlocks;b++){
+      var start=b*blockSize;
+      var len=(b<nBlocks-1)?blockSize:data.length-start;
+      var block=data.slice(start,start+len);
+      dataBlocks.push(block);
+      ecBlocks.push(ecEncode(block,ecPerBlock));
+    }
+    // Interleave data codewords, then EC codewords
+    var interleaved=[];
+    var maxDLen=dataBlocks[nBlocks-1].length;
+    for(var i=0;i<maxDLen;i++)for(var b=0;b<nBlocks;b++)if(i<dataBlocks[b].length)interleaved.push(dataBlocks[b][i]);
+    for(var i=0;i<ecPerBlock;i++)for(var b=0;b<nBlocks;b++)interleaved.push(ecBlocks[b][i]);
+
+    // Build module grid
+    var size=SIZES[ver];
+    var grid=[];
+    var reserved=[];
+    for(var r=0;r<size;r++){grid[r]=new Uint8Array(size);reserved[r]=new Uint8Array(size);}
+
+    function setMod(r,c,val){grid[r][c]=val?1:0;reserved[r][c]=1;}
+
+    // Finder patterns
+    function finderPattern(row,col){
+      for(var r=-1;r<=7;r++)for(var c=-1;c<=7;c++){
+        var rr=row+r,cc=col+c;
+        if(rr<0||rr>=size||cc<0||cc>=size)continue;
+        var inOuter=(r===0||r===6||c===0||c===6);
+        var inInner=(r>=2&&r<=4&&c>=2&&c<=4);
+        setMod(rr,cc,inOuter||inInner);
+      }
+    }
+    finderPattern(0,0);
+    finderPattern(0,size-7);
+    finderPattern(size-7,0);
+
+    // Alignment pattern (versions 2+)
+    var ALIGN_POS=[0,0,18,22,26,30]; // center position per version
+    if(ver>=2){
+      var ac=ALIGN_POS[ver];
+      if(!reserved[ac][ac]){
+        for(var r=-2;r<=2;r++)for(var c=-2;c<=2;c++){
+          var val=(r===-2||r===2||c===-2||c===2||(r===0&&c===0));
+          setMod(ac+r,ac+c,val);
+        }
+      }
+    }
+
+    // Timing patterns
+    for(var i=8;i<size-8;i++){
+      if(!reserved[6][i])setMod(6,i,i%2===0);
+      if(!reserved[i][6])setMod(i,6,i%2===0);
+    }
+
+    // Dark module
+    setMod(size-8,8,1);
+
+    // Reserve format info areas
+    for(var i=0;i<9;i++){
+      if(!reserved[8][i])reserved[8][i]=1;
+      if(!reserved[i][8])reserved[i][8]=1;
+    }
+    for(var i=0;i<8;i++){
+      reserved[8][size-1-i]=1;
+      reserved[size-1-i][8]=1;
+    }
+
+    // Place data bits
+    var allBits=[];
+    for(var i=0;i<interleaved.length;i++)for(var j=7;j>=0;j--)allBits.push((interleaved[i]>>j)&1);
+
+    var bitIdx=0;
+    for(var col=size-1;col>=1;col-=2){
+      if(col===6)col=5;
+      for(var cnt=0;cnt<size;cnt++){
+        var row=((Math.floor((size-1-col)/2))%2===0)?size-1-cnt:cnt;
+        for(var dc=0;dc<2;dc++){
+          var c=col-dc;
+          if(!reserved[row][c]){
+            grid[row][c]=bitIdx<allBits.length?allBits[bitIdx]:0;
+            bitIdx++;
+          }
+        }
+      }
+    }
+
+    // Apply mask 0 (checkerboard: (row+col)%2===0)
+    for(var r=0;r<size;r++)for(var c=0;c<size;c++){
+      if(!reserved[r][c])grid[r][c]^=((r+c)%2===0)?1:0;
+    }
+
+    // Format info for M level, mask 0
+    var fmtBits=[1,0,1,0,1,0,0,0,0,0,1,0,0,1,0];
+    // Place format info
+    var fmt1=[[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
+    var fmt2=[[size-1,8],[size-2,8],[size-3,8],[size-4,8],[size-5,8],[size-6,8],[size-7,8],[8,size-8],[8,size-7],[8,size-6],[8,size-5],[8,size-4],[8,size-3],[8,size-2],[8,size-1]];
+    for(var i=0;i<15;i++){
+      grid[fmt1[i][0]][fmt1[i][1]]=fmtBits[i];
+      grid[fmt2[i][0]][fmt2[i][1]]=fmtBits[i];
+    }
+
+    return {size:size,grid:grid};
+  }
+
+  function render(canvas,text,moduleSize){
+    moduleSize=moduleSize||6;
+    var qr=encode(text);
+    if(!qr)return false;
+    var quiet=4;
+    var total=(qr.size+quiet*2)*moduleSize;
+    canvas.width=total;canvas.height=total;
+    var ctx=canvas.getContext('2d');
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(0,0,total,total);
+    ctx.fillStyle='#000000';
+    for(var r=0;r<qr.size;r++)for(var c=0;c<qr.size;c++){
+      if(qr.grid[r][c])ctx.fillRect((c+quiet)*moduleSize,(r+quiet)*moduleSize,moduleSize,moduleSize);
+    }
+    return true;
+  }
+
+  return {encode:encode,render:render};
+})();
+
+// Transfer: Receive settings (TV side)
+function closeTransferModal(){
+  document.getElementById('transferModal').classList.remove('open');
+  releaseFocus();
+  if(typeof Capacitor!=='undefined'&&Capacitor.Plugins.SettingsTransfer){
+    Capacitor.Plugins.SettingsTransfer.stopServer({}).catch(function(){});
+  }
+}
+document.getElementById('transferClose').addEventListener('click',closeTransferModal);
+document.getElementById('transferModal').addEventListener('click',function(e){if(e.target===e.currentTarget)closeTransferModal();});
+
+async function openTransferReceive(){
+  if(typeof Capacitor==='undefined'||!Capacitor.Plugins.SettingsTransfer)return;
+  var plugin=Capacitor.Plugins.SettingsTransfer;
+
+  document.getElementById('transferTitle').textContent=t('receiveSettings');
+  document.getElementById('transferQRLabel').textContent=t('receiveSettingsQR');
+  document.getElementById('transferStatus').textContent=t('receiveSettingsWaiting');
+
+  var modal=document.getElementById('transferModal');
+  modal.classList.add('open');
+  trapFocus(modal);
+
+  var ip;
+  try{ ip=(await plugin.getLocalIp({})).ip; }catch(e){
+    document.getElementById('transferStatus').textContent=e.message||t('receiveSettingsError');
+    return;
+  }
+
+  var token=Math.random().toString(36).slice(2,10).toUpperCase();
+  var port=8765;
+  var url='https://solax.sranka.fun/send/'+ip+'/'+port+'/'+token;
+
+  _qr.render(document.getElementById('qrCanvas'),url,5);
+
+  try{
+    var result=await plugin.startServer({port:port,token:token});
+    var data=JSON.parse(result.data);
+    if(!data.host){throw new Error('Missing host');}
+    // Show confirmation
+    document.getElementById('transferStatus').textContent='';
+    var msg=t('receiveSettingsConfirm').replace('{name}',data.name||'').replace('{protocol}',data.protocol||'http').replace('{host}',data.host||'');
+    var confirmed=await new Promise(function(resolve){
+      document.getElementById('confirmMsg').textContent=msg;
+      document.getElementById('confirmNo').textContent=t('cancel');
+      document.getElementById('confirmYes').textContent=t('save');
+      document.getElementById('confirmYes').className='btn btn-primary btn-sm';
+      document.getElementById('confirmNo').onclick=function(){closeConfirmDialog();resolve(false);};
+      document.getElementById('confirmYes').onclick=function(){closeConfirmDialog();resolve(true);};
+      document.getElementById('confirmOverlay').classList.add('open');
+    });
+    // Restore confirmYes style
+    document.getElementById('confirmYes').className='btn btn-danger btn-sm';
+
+    if(confirmed){
+      var id=generateId();
+      var entry={id:id,name:data.name||data.host,host:data.host,password:data.password||'',protocol:data.protocol||'http',interval:data.interval||10,manualRefresh:data.manualRefresh||false};
+      if(data.headers&&Object.keys(data.headers).length>0)entry.headers=data.headers;
+      connections.push(entry);
+      activeId=id;setActiveId(id);
+      await saveConnections(connections);
+      renderConnList();
+      startPolling();
+      showToast(t('receiveSettingsSaved'),'success');
+    }
+    closeTransferModal();
+  }catch(e){
+    if(document.getElementById('transferModal').classList.contains('open')){
+      document.getElementById('transferStatus').textContent=t('receiveSettingsTimeout');
+    }
+  }
+}
+
+document.getElementById('receiveSettingsBtn').addEventListener('click',openTransferReceive);
+
+// Transfer: Deep link handler (Phone side — sends settings to TV)
+window._handleDeepLink=function(urlStr){
+  try{
+    // Parse URL: srankasolax://send/<ip>/<port>/<token> or https://solax.sranka.fun/send/<ip>/<port>/<token>
+    var match=urlStr.match(/\/send\/([^\/]+)\/(\d+)\/([^\/]+)$/i);
+    if(!match)return;
+    var to=match[1]+':'+match[2];
+    var token=match[3];
+    if(!to)return;
+
+    var cfg=getActiveConfig();
+    if(!cfg){showToast(t('sendSettingsNoActive'));return;}
+
+    showToast(t('sendingSettings'));
+
+    var payload=JSON.stringify({name:cfg.name,host:cfg.host,password:cfg.password,protocol:cfg.protocol,interval:cfg.interval,manualRefresh:cfg.manualRefresh||false,headers:cfg.headers||{}});
+
+    var ctrl=new AbortController();
+    var timer=setTimeout(function(){ctrl.abort();},3000);
+    fetch('http://'+to+'/transfer?token='+encodeURIComponent(token),{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:payload,
+      signal:ctrl.signal
+    }).then(function(resp){
+      clearTimeout(timer);
+      if(resp.ok)showToast(t('sendSettingsSuccess'),'success');
+      else showToast(t('sendSettingsError'));
+    }).catch(function(){
+      clearTimeout(timer);
+      showToast(t('sendSettingsError'));
+    });
+  }catch(e){
+    showToast(t('sendSettingsError'));
+  }
+};
+
 document.getElementById('saveConn').addEventListener('click',async()=>{
   const host=document.getElementById('cfgHost').value.trim();
   const password=document.getElementById('cfgPassword').value.trim();
@@ -1905,11 +2273,13 @@ document.getElementById('confirmOverlay').addEventListener('click',e=>{
 // ═══════════════════════════════════════════
 //  Utils
 // ═══════════════════════════════════════════
+var _toastTimer;
 function showToast(msg,type){
+  if(_toastTimer)clearTimeout(_toastTimer);
   const t=document.getElementById('toast');
   t.textContent=msg;
   t.className='toast show'+(type==='success'?' success':'');
-  setTimeout(()=>t.className='toast',3000);
+  _toastTimer=setTimeout(()=>{t.className='toast';_toastTimer=null;},3000);
 }
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 
@@ -1935,6 +2305,12 @@ function esc(s){const d=document.createElement('div');d.textContent=s;return d.i
     }catch(e){/* timeout or fetch error — skip auto-add */}
   }
   applyLanguage();
+  // Web: handle /send/<ip>/<port>/<token> path (browser fallback for App Links)
+  var sendMatch=location.pathname.match(/\/send\/([^\/]+)\/(\d+)\/([^\/]+)$/i);
+  if(sendMatch){
+    window._handleDeepLink(location.href);
+    return;
+  }
   startPolling();
 })();
 

@@ -1,6 +1,10 @@
 package com.github.sranka.solax_fve_realtime_app;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import androidx.activity.OnBackPressedCallback;
 import androidx.core.view.WindowCompat;
 import com.getcapacitor.BridgeActivity;
@@ -10,6 +14,7 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(ModbusTcpPlugin.class);
         registerPlugin(NetworkScannerPlugin.class);
+        registerPlugin(SettingsTransferPlugin.class);
         super.onCreate(savedInstanceState);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
 
@@ -33,5 +38,31 @@ public class MainActivity extends BridgeActivity {
                 );
             }
         });
+
+        // Handle deep link on initial launch
+        Uri launchUri = getIntent().getData();
+        if (launchUri != null) {
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                dispatchDeepLink(launchUri);
+            }, 500);
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        Uri uri = intent.getData();
+        if (uri != null) {
+            dispatchDeepLink(uri);
+        }
+    }
+
+    private void dispatchDeepLink(Uri uri) {
+        if (getBridge() != null && getBridge().getWebView() != null) {
+            String escaped = uri.toString().replace("\\", "\\\\").replace("'", "\\'");
+            getBridge().getWebView().evaluateJavascript(
+                    "window._handleDeepLink&&window._handleDeepLink('" + escaped + "')", null);
+        }
     }
 }
