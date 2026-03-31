@@ -343,6 +343,12 @@
     .dashboard-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .dashboard-col > :last-child { flex: 1; }
   }
+  @media (max-height: 580px) and (min-width: 800px) {
+    .main { padding-top: 6px; padding-bottom: 6px; }
+    .power-flow { margin-bottom: 6px; }
+    .status-row { margin-bottom: 6px; }
+    .card { margin-bottom: 6px; }
+  }
   @media (min-width: 1300px) { body { zoom: 1.15; } :root { --modal-max-h: calc(90dvh / 1.15); } }
   @media (min-width: 1600px) { body { zoom: 1.35; } :root { --modal-max-h: calc(90dvh / 1.35); } }
   @media (min-width: 1900px) { body { zoom: 1.5; } :root { --modal-max-h: calc(90dvh / 1.5); } }
@@ -2174,14 +2180,14 @@ window._handleDeepLink=function(urlStr){
 
     var payload=JSON.stringify({name:cfg.name,host:cfg.host,password:cfg.password,protocol:cfg.protocol,interval:cfg.interval,manualRefresh:cfg.manualRefresh||false,headers:cfg.headers||{}});
 
-    var url='http://'+to+'/transfer?token='+encodeURIComponent(token);
     if(typeof Capacitor!=='undefined'&&Capacitor.Plugins.SettingsTransfer){
-      Capacitor.Plugins.SettingsTransfer.sendSettings({url:url,payload:payload}).then(function(){
+      Capacitor.Plugins.SettingsTransfer.sendSettings({host:match[1],port:parseInt(match[2]),token:token,payload:payload}).then(function(){
         showToast(t('sendSettingsSuccess'),'success');
       }).catch(function(){
         showToast(t('sendSettingsError'));
       });
     }else{
+      var url='http://'+to+'/transfer?token='+encodeURIComponent(token);
       fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:payload}).then(function(resp){
         if(resp.ok)showToast(t('sendSettingsSuccess'),'success');
         else showToast(t('sendSettingsError'));
