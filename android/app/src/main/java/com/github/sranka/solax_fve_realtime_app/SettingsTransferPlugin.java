@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.Proxy;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -97,10 +98,14 @@ public class SettingsTransferPlugin extends Plugin {
 
         new Thread(() -> {
             try {
-                Log.d(TAG, "startServer: waiting for client connection...");
-                Socket client = serverSocket.accept();
-                Log.i(TAG, "startServer: client connected from " + client.getRemoteSocketAddress());
-                handleClient(client, token);
+                while (pendingCall != null && serverSocket != null && !serverSocket.isClosed()) {
+                    Log.d(TAG, "startServer: waiting for client connection...");
+                    Socket client = serverSocket.accept();
+                    Log.i(TAG, "startServer: client connected from " + client.getRemoteSocketAddress());
+                    if (handleClient(client, token)) {
+                        break; // POST handled successfully
+                    }
+                }
             } catch (SocketTimeoutException e) {
                 Log.w(TAG, "startServer: socket accept timed out");
             } catch (IOException e) {
@@ -117,7 +122,8 @@ public class SettingsTransferPlugin extends Plugin {
         }).start();
     }
 
-    private void handleClient(Socket client, String expectedToken) {
+    /** Returns true if a POST was successfully handled, false for OPTIONS/errors (caller should accept again). */
+    private boolean handleClient(Socket client, String expectedToken) {
         try {
             client.setSoTimeout(10000);
             BufferedReader reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
@@ -129,7 +135,7 @@ public class SettingsTransferPlugin extends Plugin {
             if (requestLine == null) {
                 Log.w(TAG, "handleClient: null request line, sending 400");
                 sendResponse(out, 400, "Bad Request");
-                return;
+                return false;
             }
 
             // Parse method and path
@@ -137,40 +143,32 @@ public class SettingsTransferPlugin extends Plugin {
             if (parts.length < 2) {
                 Log.w(TAG, "handleClient: malformed request line: " + requestLine);
                 sendResponse(out, 400, "Bad Request");
-                return;
+                return false;
             }
 
             String method = parts[0];
             String path = parts[1];
             Log.d(TAG, "handleClient: method=" + method + " path=" + path);
 
-            // Handle CORS preflight
+            // Handle CORS preflight — respond and let the accept loop pick up the next connection
             if ("OPTIONS".equals(method)) {
-                Log.d(TAG, "handleClient: CORS preflight, sending 204 and waiting for POST");
+                Log.d(TAG, "handleClient: CORS preflight, sending 204");
                 sendCorsResponse(out);
-                // After preflight, accept another connection for the actual POST
                 client.close();
-                try {
-                    Socket postClient = serverSocket.accept();
-                    Log.d(TAG, "handleClient: post-preflight client connected from " + postClient.getRemoteSocketAddress());
-                    handleClient(postClient, expectedToken);
-                } catch (IOException e) {
-                    Log.e(TAG, "handleClient: error accepting post-preflight connection", e);
-                }
-                return;
+                return false;
             }
 
             if (!"POST".equals(method)) {
                 Log.w(TAG, "handleClient: rejecting method " + method + " with 405");
                 sendResponse(out, 405, "Method Not Allowed");
-                return;
+                return false;
             }
 
             // Validate token in path
             if (!expectedToken.isEmpty() && !path.contains("token=" + expectedToken)) {
                 Log.w(TAG, "handleClient: token mismatch, sending 403");
                 sendResponse(out, 403, "Forbidden");
-                return;
+                return false;
             }
 
             // Read headers to find Content-Length
@@ -224,14 +222,10 @@ public class SettingsTransferPlugin extends Plugin {
                     pendingCall = null;
                 }
             }
+            return true;
         } catch (IOException e) {
             Log.e(TAG, "handleClient: error", e);
-            synchronized (this) {
-                if (pendingCall != null) {
-                    pendingCall.reject("Error handling client: " + e.getMessage());
-                    pendingCall = null;
-                }
-            }
+            return false;
         }
     }
 
@@ -273,12 +267,14 @@ public class SettingsTransferPlugin extends Plugin {
         new Thread(() -> {
             HttpURLConnection conn = null;
             try {
-                conn = (HttpURLConnection) new URL(url).openConnection();
+                conn = (HttpURLConnection) new URL(url).openConnection(Proxy.NO_PROXY);
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "text/plain");
                 conn.setConnectTimeout(10000);
                 conn.setReadTimeout(10000);
                 conn.setDoOutput(true);
+                conn.setUseCaches(false);
+                conn.setInstanceFollowRedirects(false);
 
                 byte[] bodyBytes = payload.getBytes("UTF-8");
                 conn.setFixedLengthStreamingMode(bodyBytes.length);
