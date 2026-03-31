@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 public class SettingsTransferPlugin extends Plugin {
 
     private static final int DEFAULT_PORT = 8765;
-    private static final int TIMEOUT_SECONDS = 120;
+    private static final int TIMEOUT_SECONDS = 600;
 
     private ServerSocket serverSocket;
     private PluginCall pendingCall;
