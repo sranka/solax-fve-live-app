@@ -498,6 +498,22 @@
   .toast.show { transform: translateX(-50%) translateY(0); }
   .toast.success { background: var(--success); }
 
+  /* ─── Update Banner ─── */
+  .update-banner {
+    display: none; position: fixed; bottom: 70px; left: 50%; z-index: 310;
+    transform: translateX(-50%);
+    background: var(--accent); color: #fff; padding: 10px 16px;
+    border-radius: 10px; font-size: 13px; font-weight: 500;
+    max-width: 90%; text-align: center; gap: 10px; align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .update-banner.show { display: flex; }
+  .update-banner button {
+    background: rgba(255,255,255,0.25); color: #fff; border: none;
+    padding: 5px 14px; border-radius: 6px; font-size: 13px; font-weight: 600;
+    cursor: pointer;
+  }
+
   /* ─── Loading Screen ─── */
   .loading-screen {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -880,6 +896,11 @@
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+<!-- Update Banner -->
+<div class="update-banner" id="updateBanner">
+  <span id="updateMsg"></span>
+  <button id="updateBtn" onclick="location.reload()"></button>
+</div>
 
 <script src="i18n.js"></script>
 <script>
@@ -939,6 +960,10 @@ function applyLanguage() {
   document.getElementById('energyLabelToGrid').textContent = t('toGrid');
   document.getElementById('energyLabelFromGrid').textContent = t('fromGrid');
   document.getElementById('energyLabelSolarYield').textContent = t('solarYield');
+
+  // Update banner
+  document.getElementById('updateMsg').textContent = t('updateAvailable');
+  document.getElementById('updateBtn').textContent = t('updateReload');
 
   // Refresh bar
   if (!lastData) document.getElementById('refreshBar').textContent = t('lastUpdate');
@@ -2287,7 +2312,14 @@ function esc(s){const d=document.createElement('div');d.textContent=s;return d.i
 <script src="build-info.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
+  navigator.serviceWorker.register('sw.js').then(function(reg) {
+    // Check for updates every 10 minutes
+    setInterval(function() { reg.update(); }, 10 * 60 * 1000);
+  });
+  // When a new SW takes control, show the update banner
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    document.getElementById('updateBanner').classList.add('show');
+  });
 }
 </script>
 </body>
